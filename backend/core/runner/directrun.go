@@ -37,6 +37,8 @@ func RunCmd(cmd *cobra.Command) {
 	cmd.Flags().StringSliceP("subtasks", "t", nil, "specify what tasks to run, --subtasks=collectIssues,extractIssues")
 	err := cmd.Execute()
 	if err != nil {
+		fmt.Println("--------")
+		fmt.Println(err)
 		panic(err)
 	}
 }

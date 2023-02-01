@@ -22,9 +22,9 @@ import (
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
-    "github.com/apache/incubator-devlake/plugins/googlespreadsheet/api"
-    "github.com/apache/incubator-devlake/plugins/googlespreadsheet/models"
-    "github.com/apache/incubator-devlake/plugins/googlespreadsheet/models/migrationscripts"
+	"github.com/apache/incubator-devlake/plugins/googlespreadsheet/api"
+	"github.com/apache/incubator-devlake/plugins/googlespreadsheet/models"
+	"github.com/apache/incubator-devlake/plugins/googlespreadsheet/models/migrationscripts"
 	"github.com/apache/incubator-devlake/plugins/googlespreadsheet/tasks"
 
 	"github.com/apache/incubator-devlake/core/context"
@@ -37,8 +37,6 @@ var _ plugin.PluginTask = (*Googlespreadsheet)(nil)
 var _ plugin.PluginApi = (*Googlespreadsheet)(nil)
 var _ plugin.PluginBlueprintV100 = (*Googlespreadsheet)(nil)
 var _ plugin.CloseablePluginTask = (*Googlespreadsheet)(nil)
-
-
 
 type Googlespreadsheet struct{}
 
@@ -53,34 +51,33 @@ func (p Googlespreadsheet) Init(br context.BasicRes) errors.Error {
 
 func (p Googlespreadsheet) SubTaskMetas() []plugin.SubTaskMeta {
 	// TODO add your sub task here
-	return []plugin.SubTaskMeta{
-	}
+	return []plugin.SubTaskMeta{}
 }
 
 func (p Googlespreadsheet) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]interface{}) (interface{}, errors.Error) {
 	op, err := tasks.DecodeAndValidateTaskOptions(options)
-    if err != nil {
-        return nil, err
-    }
-    connectionHelper := helper.NewConnectionHelper(
-        taskCtx,
-        nil,
-    )
-    connection := &models.GooglespreadsheetConnection{}
-    err = connectionHelper.FirstById(connection, op.ConnectionId)
-    if err != nil {
-        return nil, errors.Default.Wrap(err, "unable to get Googlespreadsheet connection by the given connection ID")
-    }
+	if err != nil {
+		return nil, err
+	}
+	connectionHelper := helper.NewConnectionHelper(
+		taskCtx,
+		nil,
+	)
+	connection := &models.GooglespreadsheetConnection{}
+	err = connectionHelper.FirstById(connection, op.ConnectionId)
+	if err != nil {
+		return nil, errors.Default.Wrap(err, "unable to get Googlespreadsheet connection by the given connection ID")
+	}
 
-    apiClient, err := tasks.NewGooglespreadsheetApiClient(taskCtx, connection)
-    if err != nil {
-        return nil, errors.Default.Wrap(err, "unable to get Googlespreadsheet API client instance")
-    }
+	apiClient, err := tasks.NewGooglespreadsheetApiClient(taskCtx, connection)
+	if err != nil {
+		return nil, errors.Default.Wrap(err, "unable to get Googlespreadsheet API client instance")
+	}
 
-    return &tasks.GooglespreadsheetTaskData{
-        Options:   op,
-        ApiClient: apiClient,
-    }, nil
+	return &tasks.GooglespreadsheetTaskData{
+		Options:   op,
+		ApiClient: apiClient,
+	}, nil
 }
 
 // PkgPath information lost when compiled as plugin(.so)
@@ -93,20 +90,20 @@ func (p Googlespreadsheet) MigrationScripts() []plugin.MigrationScript {
 }
 
 func (p Googlespreadsheet) ApiResources() map[string]map[string]plugin.ApiResourceHandler {
-    return map[string]map[string]plugin.ApiResourceHandler{
-        "test": {
-            "POST": api.TestConnection,
-        },
-        "connections": {
-            "POST": api.PostConnections,
-            "GET":  api.ListConnections,
-        },
-        "connections/:connectionId": {
-            "GET":    api.GetConnection,
-            "PATCH":  api.PatchConnection,
-            "DELETE": api.DeleteConnection,
-        },
-    }
+	return map[string]map[string]plugin.ApiResourceHandler{
+		"test": {
+			"POST": api.TestConnection,
+		},
+		"connections": {
+			"POST": api.PostConnections,
+			"GET":  api.ListConnections,
+		},
+		"connections/:connectionId": {
+			"GET":    api.GetConnection,
+			"PATCH":  api.PatchConnection,
+			"DELETE": api.DeleteConnection,
+		},
+	}
 }
 
 func (p Googlespreadsheet) MakePipelinePlan(connectionId uint64, scope []*plugin.BlueprintScopeV100) (plugin.PipelinePlan, errors.Error) {
