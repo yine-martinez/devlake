@@ -15,35 +15,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package migrationscripts
+package archived
 
 import (
-	"github.com/apache/incubator-devlake/core/context"
-	"github.com/apache/incubator-devlake/core/errors"
-	"github.com/apache/incubator-devlake/helpers/migrationhelper"
-	"github.com/apache/incubator-devlake/plugins/google/models/migrationscripts/archived"
+	"github.com/apache/incubator-devlake/core/models/migrationscripts/archived"
 )
 
-type addInitTables struct{}
-
-func (*addInitTables) Up(basicRes context.BasicRes) errors.Error {
-	err := basicRes.GetDal().DropTables(
-	)
-
-	if err != nil {
-		return err
-	}
-
-	return migrationhelper.AutoMigrateTables(
-		basicRes,
-		&archived.GoogleConnection{},
-	)
+// This object conforms to what the frontend currently sends.
+type GoogleConnection struct {
+	RestConnection `mapstructure:",squash"`
+	AccessToken    `mapstructure:",squash"`
 }
 
-func (*addInitTables) Version() uint64 {
-	return 20230201000001
+type RestConnection struct {
+	BaseConnection   `mapstructure:",squash"`
+	Endpoint         string `mapstructure:"endpoint" validate:"required" json:"endpoint"`
 }
 
-func (*addInitTables) Name() string {
-	return "google init schemas"
+type BaseConnection struct {
+	Name string `gorm:"type:varchar(100);uniqueIndex" json:"name" validate:"required"`
+	archived.Model
+}
+
+type AccessToken struct {
+	Token string `mapstructure:"token" validate:"required" json:"token" encrypt:"yes"`
+}
+
+func (GoogleConnection) TableName() string {
+	return "_tool_google_connections"
 }
