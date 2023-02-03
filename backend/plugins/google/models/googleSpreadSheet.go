@@ -2,7 +2,7 @@ package models
 
 import "github.com/apache/incubator-devlake/core/models/common"
 
-type googleSpreadSheet struct {
+type GoogleSpreadSheet struct {
 	common.NoPKModel
 	team           string
 	sprint         int
@@ -14,6 +14,6 @@ type googleSpreadSheet struct {
 	flowEfficiency float64
 }
 
-func (googleSpreadSheet) TableName() string {
+func (GoogleSpreadSheet) TableName() string {
 	return "_tool_google_spreadSheet"
 }

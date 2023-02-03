@@ -34,7 +34,7 @@ func NewGoogleApiClient(taskCtx plugin.TaskContext, connection *models.GoogleCon
 	headers := map[string]string{
 		"Authorization": fmt.Sprintf("Bearer %v", connection.Token),
 	}
-	apiClient, err := api.NewApiClient(taskCtx.GetContext(), connection.Endpoint, headers, 0, connection.Proxy, taskCtx)
+	apiClient, err := api.NewApiClient(taskCtx.GetContext(), connection.Endpoint, headers, 0, "", taskCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func NewGoogleApiClient(taskCtx plugin.TaskContext, connection *models.GoogleCon
 
 	// create rate limit calculator
 	rateLimiter := &api.ApiRateLimitCalculator{
-		UserRateLimitPerHour: connection.RateLimitPerHour,
+		UserRateLimitPerHour: 300,
 		DynamicRateLimit: func(res *http.Response) (int, time.Duration, errors.Error) {
 			rateLimitHeader := res.Header.Get("RateLimit-Limit")
 			if rateLimitHeader == "" {

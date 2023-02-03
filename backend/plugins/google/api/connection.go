@@ -37,8 +37,16 @@ func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, 
 	if e != nil {
 		return nil, errors.Convert(e)
 	}
+
+	headers := make(map[string]string)
 	// test connection
-	apiClient, err := api.NewApiClientFromConnection(context.TODO(), basicRes, connection)
+	apiClient, err := api.NewApiClient(
+	context.TODO(),
+	connection.GetEndpoint(),
+	headers,
+	200,
+	"",
+	basicRes,)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +55,7 @@ func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, 
 	if err != nil {
 		return nil, err
 	}
-	resBody := &models.ApiUserResponse{}
+	resBody := &models.GoogleSpreadSheet{}
 	err = api.UnmarshalResponse(res, resBody)
 	if err != nil {
 		return nil, err

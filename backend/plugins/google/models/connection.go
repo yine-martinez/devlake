@@ -17,37 +17,29 @@ limitations under the License.
 
 package models
 
-import helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
+import (
+	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
+)
 
 // TODO Please modify the following code to fit your needs
 // This object conforms to what the frontend currently sends.
 type GoogleConnection struct {
-	//helper.RestConnection `mapstructure:",squash"`
-	//TODO you may need to use helper.BasicAuth instead of helper.AccessToken
-	//helper.AccessToken    `mapstructure:",squash"`
 	helper.RestConnection `mapstructure:",squash"`
-	helper.MultiAuth      `mapstructure:",squash"`
-	helper.BasicAuth      `mapstructure:",squash"`
-	helper.AccessToken    `mapstructure:",squash"`
+	AccessToken    `mapstructure:",squash"`
 }
 
 type TestConnectionRequest struct {
 	Endpoint           string `json:"endpoint"`
-	Proxy              string `json:"proxy"`
-	helper.AccessToken `mapstructure:",squash"`
+	AccessToken `mapstructure:",squash"`
 }
 
-// This object conforms to what the frontend currently expects.
-type GoogleResponse struct {
-	Name string `json:"name"`
-	ID   int    `json:"id"`
-	GoogleConnection
+type RestConnection struct {
+	helper.BaseConnection   `mapstructure:",squash"`
+	Endpoint         string `mapstructure:"endpoint" validate:"required" json:"endpoint"`
 }
 
-// Using User because it requires authentication.
-type ApiUserResponse struct {
-	Id   int
-	Name string `json:"name"`
+type AccessToken struct {
+	Token string `mapstructure:"token" validate:"required" json:"token" encrypt:"yes"`
 }
 
 func (GoogleConnection) TableName() string {
