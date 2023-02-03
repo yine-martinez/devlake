@@ -29,6 +29,9 @@ var PluginEntry impl.Google //nolint
 // standalone mode for debugging
 func main() {
 	cmd := &cobra.Command{Use: "google"}
+	connectionId := cmd.Flags().Uint64P("connection", "c", 0, "google connection id")
+
+	_ = cmd.MarkFlagRequired("connection")
 
 	// TODO add your cmd flag if necessary
 	// yourFlag := cmd.Flags().IntP("yourFlag", "y", 8, "TODO add description here")
@@ -36,7 +39,7 @@ func main() {
 
 	cmd.Run = func(cmd *cobra.Command, args []string) {
 		runner.DirectRun(cmd, args, PluginEntry, map[string]interface{}{
-			// TODO add more custom params here
+			"connectionId":     *connectionId,
 		})
 	}
 	runner.RunCmd(cmd)
