@@ -51,7 +51,9 @@ func (p Google) Init(br context.BasicRes) errors.Error {
 
 func (p Google) SubTaskMetas() []plugin.SubTaskMeta {
 	// TODO add your sub task here
-	return []plugin.SubTaskMeta{}
+	return []plugin.SubTaskMeta{
+		tasks.CollectSpreadsheetMeta,
+	}
 }
 
 func (p Google) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]interface{}) (interface{}, errors.Error) {

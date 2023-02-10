@@ -28,6 +28,7 @@ type addInitTables struct{}
 
 func (*addInitTables) Up(basicRes context.BasicRes) errors.Error {
 	err := basicRes.GetDal().DropTables(
+		&archived.GoogleConnection{},
 	)
 
 	if err != nil {

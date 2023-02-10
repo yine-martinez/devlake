@@ -25,17 +25,19 @@ import (
 // This object conforms to what the frontend currently sends.
 type GoogleConnection struct {
 	helper.RestConnection `mapstructure:",squash"`
-	AccessToken    `mapstructure:",squash"`
+	AccessToken           `mapstructure:",squash"`
 }
 
 type TestConnectionRequest struct {
-	Endpoint           string `json:"endpoint"`
+	Endpoint    string `json:"endpoint"`
 	AccessToken `mapstructure:",squash"`
 }
 
 type RestConnection struct {
-	helper.BaseConnection   `mapstructure:",squash"`
-	Endpoint         string `mapstructure:"endpoint" validate:"required" json:"endpoint"`
+	helper.RestConnection `mapstructure:",squash"`
+	helper.AccessToken    `mapstructure:",squash"`
+	helper.BaseConnection `mapstructure:",squash"`
+	Endpoint              string `mapstructure:"endpoint" validate:"required" json:"endpoint"`
 }
 
 type AccessToken struct {
