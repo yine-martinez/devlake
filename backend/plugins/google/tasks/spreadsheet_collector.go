@@ -88,7 +88,7 @@ func CollectSpreadsheet(taskCtx core.SubTaskContext) errors.Error {
 		ApiClient:   data.ApiClient,
 		Incremental: false,
 
-		UrlTemplate: "/spreadsheets/1TZk0LhUxfhIoRaVMHvOaE5M5iM1uFxXcddUXHMcIKXk/values/A1:B12",
+		UrlTemplate: "/spreadsheets/1TZk0LhUxfhIoRaVMHvOaE5M5iM1uFxXcddUXHMcIKXk/values/B2:J185",
 
 		Query: func(reqData *api.RequestData) (url.Values, errors.Error) {
 			query := url.Values{}
@@ -96,16 +96,18 @@ func CollectSpreadsheet(taskCtx core.SubTaskContext) errors.Error {
 		},
 		ResponseParser: func(res *http.Response) ([]json.RawMessage, errors.Error) {
 			println(res)
+
 			body := &struct {
-				LastUpdated string          `json:"last_updated"`
-				Committers  json.RawMessage `json:"committers"`
+				Range string          `json:"range"`
+				MajorDimension  string `json:"majorDimension"`
+				Values json.RawMessage `json:"values"`
 			}{}
 			err := api.UnmarshalResponse(res, body)
 			if err != nil {
 				return nil, err
 			}
-			println("receive data:", len(body.Committers))
-			return []json.RawMessage{body.Committers}, nil
+			println("receive data:", len(body.Values))
+			return []json.RawMessage{body.Values}, nil
 		},
 	})
 	if err != nil {

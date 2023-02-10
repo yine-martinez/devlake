@@ -1,6 +1,6 @@
-package models
+package archived
 
-import "github.com/apache/incubator-devlake/core/models/common"
+import "github.com/apache/incubator-devlake/core/models/migrationscripts/archived"
 
 type GoogleSpreadSheet struct {
 	team           string
@@ -11,7 +11,7 @@ type GoogleSpreadSheet struct {
 	leadTime       float64
 	cycleTime      float64
 	flowEfficiency float64
-	common.NoPKModel
+	archived.NoPKModel
 }
 
 func (GoogleSpreadSheet) TableName() string {
