@@ -38,7 +38,6 @@ func (*addInitTables) Up(basicRes context.BasicRes) errors.Error {
 	return migrationhelper.AutoMigrateTables(
 		basicRes,
 		&archived.GoogleConnection{},
-		&archived.GoogleSpreadSheet{},
 	)
 }
 

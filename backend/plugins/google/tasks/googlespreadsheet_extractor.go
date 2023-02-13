@@ -21,24 +21,24 @@ import (
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
+	"github.com/apache/incubator-devlake/plugins/google/models"
 )
 
 var _ plugin.SubTaskEntryPoint = ExtractGooglespreadsheet
 
 func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
-    extractor, err := helper.NewApiExtractor(helper.ApiExtractorArgs{
+	extractor, err := helper.NewApiExtractor(helper.ApiExtractorArgs{
 		RawDataSubTaskArgs: helper.RawDataSubTaskArgs{
-			Ctx: taskCtx,
-			Params: GoogleApiParams{
-			},
-			Table: RAW_SPREADSHEET_TABLE,
+			Ctx:    taskCtx,
+			Params: GoogleApiParams{},
+			Table:  RAW_SPREADSHEET_TABLE,
 		},
 		Extract: func(resData *helper.RawData) ([]interface{}, errors.Error) {
 			extractedModels := make([]interface{}, 0)
 			println(resData.Data)
 			println(resData.Input)
 			// TODO decode some db models from api result
-			// extractedModels = append(extractedModels, &models.XXXXXX)
+			extractedModels = append(extractedModels, &models.GoogleSpreadSheet{})
 			return extractedModels, nil
 		},
 	})

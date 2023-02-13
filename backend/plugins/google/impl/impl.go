@@ -53,6 +53,7 @@ func (p Google) SubTaskMetas() []plugin.SubTaskMeta {
 	// TODO add your sub task here
 	return []plugin.SubTaskMeta{
 		tasks.CollectSpreadsheetMeta,
+		tasks.ExtractGooglespreadsheetMeta,
 	}
 }
 
