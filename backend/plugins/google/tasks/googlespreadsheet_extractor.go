@@ -21,10 +21,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/apache/incubator-devlake/core/errors"
-	"github.com/apache/incubator-devlake/core/models/common"
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
-	"github.com/apache/incubator-devlake/plugins/google/models"
 	"github.com/shopspring/decimal"
 )
 
@@ -47,8 +45,12 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 
 			for _, value := range extractedData {
 				fmt.Println(value)
-				//var data *models.GoogleSpreadSheet
-				//json.Unmarshal(v, data)
+				data := &response{}
+				b, _ := json.Marshal(value)
+				json.Unmarshal(b, &data)
+				fmt.Println(data.Team)
+				/*var data *models.GoogleSpreadSheet
+				json.Unmarshal(value, &data)
 				dataModel := models.GoogleSpreadSheet{
 					Team:           "",
 					Sprint:         0,
@@ -61,6 +63,8 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 					NoPKModel:      common.NoPKModel{},
 				}
 				extractedModels = append(extractedModels, dataModel)
+
+				*/
 			}
 
 			return extractedModels, nil
@@ -71,6 +75,22 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 	}
 
 	return extractor.Execute()
+}
+
+type response struct {
+	Team           string
+	Sprint         int
+	Tribe          string
+	Q              string
+	Throughput     decimal.Decimal
+	LeadTime       decimal.Decimal
+	CycleTime      decimal.Decimal
+	FlowEfficiency decimal.Decimal
+}
+
+func (r *response) UnmarshalJSON(b []byte) error {
+	a := []interface{}{&r.Team, &r.Sprint, &r.Tribe, &r.Q, &r.Throughput, &r.LeadTime, &r.CycleTime, &r.FlowEfficiency}
+	return json.Unmarshal(b, &a)
 }
 
 var ExtractGooglespreadsheetMeta = plugin.SubTaskMeta{
