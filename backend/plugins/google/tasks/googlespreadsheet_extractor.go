@@ -18,10 +18,14 @@ limitations under the License.
 package tasks
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/apache/incubator-devlake/core/errors"
+	"github.com/apache/incubator-devlake/core/models/common"
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/google/models"
+	"github.com/shopspring/decimal"
 )
 
 var _ plugin.SubTaskEntryPoint = ExtractGooglespreadsheet
@@ -35,10 +39,30 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 		},
 		Extract: func(resData *helper.RawData) ([]interface{}, errors.Error) {
 			extractedModels := make([]interface{}, 0)
-			println(resData.Data)
-			println(resData.Input)
+			extractedData := make([]interface{}, 0)
+			println("-----------------")
+			json.Unmarshal(resData.Data, &extractedData)
 			// TODO decode some db models from api result
-			extractedModels = append(extractedModels, &models.GoogleSpreadSheet{})
+			println("-----------------")
+
+			for _, value := range extractedData {
+				fmt.Println(value)
+				//var data *models.GoogleSpreadSheet
+				//json.Unmarshal(v, data)
+				dataModel := models.GoogleSpreadSheet{
+					Team:           "",
+					Sprint:         0,
+					Tribe:          "",
+					Q:              "",
+					Throughput:     decimal.Decimal{},
+					LeadTime:       decimal.Decimal{},
+					CycleTime:      decimal.Decimal{},
+					FlowEfficiency: decimal.Decimal{},
+					NoPKModel:      common.NoPKModel{},
+				}
+				extractedModels = append(extractedModels, dataModel)
+			}
+
 			return extractedModels, nil
 		},
 	})

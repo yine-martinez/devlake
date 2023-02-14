@@ -6,14 +6,14 @@ import (
 )
 
 type GoogleSpreadSheet struct {
-	team           string `gorm:"primaryKey"`
-	sprint         int    `gorm:"primaryKey"`
-	tribe          string
-	q              string
-	throughput     decimal.Decimal `gorm:"type:decimal(3,1)"`
-	leadTime       decimal.Decimal `gorm:"type:decimal(3,1)"`
-	cycleTime      decimal.Decimal `gorm:"type:decimal(3,1)"`
-	flowEfficiency decimal.Decimal `gorm:"type:decimal(3,1)"`
+	Team           string `gorm:"primaryKey"`
+	Sprint         int    `gorm:"primaryKey"`
+	Tribe          string
+	Q              string
+	Throughput     decimal.Decimal `gorm:"type:decimal(3,1)"`
+	LeadTime       decimal.Decimal `gorm:"type:decimal(3,1)"`
+	CycleTime      decimal.Decimal `gorm:"type:decimal(3,1)"`
+	FlowEfficiency decimal.Decimal `gorm:"type:decimal(3,1)"`
 
 	common.NoPKModel
 }
