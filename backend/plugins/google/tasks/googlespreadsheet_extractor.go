@@ -23,7 +23,9 @@ import (
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
+	"github.com/apache/incubator-devlake/plugins/google/models"
 	"github.com/shopspring/decimal"
+	"strconv"
 )
 
 var _ plugin.SubTaskEntryPoint = ExtractGooglespreadsheet
@@ -49,22 +51,34 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 				b, _ := json.Marshal(value)
 				json.Unmarshal(b, &data)
 				fmt.Println(data.Team)
-				/*var data *models.GoogleSpreadSheet
-				json.Unmarshal(value, &data)
-				dataModel := models.GoogleSpreadSheet{
-					Team:           "",
-					Sprint:         0,
-					Tribe:          "",
-					Q:              "",
-					Throughput:     decimal.Decimal{},
-					LeadTime:       decimal.Decimal{},
-					CycleTime:      decimal.Decimal{},
-					FlowEfficiency: decimal.Decimal{},
-					NoPKModel:      common.NoPKModel{},
+				fmt.Println(data.Sprint)
+				sprintInt, _ := strconv.Atoi(data.Sprint)
+				t, error := decimal.NewFromString(data.Throughput)
+				if error != nil {
+					t = decimal.NewFromInt(0)
 				}
-				extractedModels = append(extractedModels, dataModel)
-
-				*/
+				l, error := decimal.NewFromString(data.LeadTime)
+				if error != nil {
+					l = decimal.NewFromInt(0)
+				}
+				c, error := decimal.NewFromString(data.CycleTime)
+				if data.CycleTime != "" {
+					c = decimal.NewFromInt(0)
+				}
+				f, error := decimal.NewFromString(data.FlowEfficiency)
+				if error != nil {
+					f = decimal.NewFromInt(0)
+				}
+				extractedModels = append(extractedModels, &models.GoogleSpreadSheet{
+					Team:           data.Team,
+					Sprint:         sprintInt,
+					Tribe:          data.Tribe,
+					Q:              data.Q,
+					Throughput:     t,
+					LeadTime:       l,
+					CycleTime:      c,
+					FlowEfficiency: f,
+				})
 			}
 
 			return extractedModels, nil
@@ -79,13 +93,13 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 
 type response struct {
 	Team           string
-	Sprint         int
+	Sprint         string
 	Tribe          string
 	Q              string
-	Throughput     decimal.Decimal
-	LeadTime       decimal.Decimal
-	CycleTime      decimal.Decimal
-	FlowEfficiency decimal.Decimal
+	Throughput     string
+	LeadTime       string
+	CycleTime      string
+	FlowEfficiency string
 }
 
 func (r *response) UnmarshalJSON(b []byte) error {

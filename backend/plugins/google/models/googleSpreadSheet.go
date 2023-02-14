@@ -14,10 +14,9 @@ type GoogleSpreadSheet struct {
 	LeadTime       decimal.Decimal `gorm:"type:decimal(3,1)"`
 	CycleTime      decimal.Decimal `gorm:"type:decimal(3,1)"`
 	FlowEfficiency decimal.Decimal `gorm:"type:decimal(3,1)"`
-
 	common.NoPKModel
 }
 
 func (GoogleSpreadSheet) TableName() string {
-	return "_tool_google_spreadSheet"
+	return "_tool_google_spreadsheet"
 }

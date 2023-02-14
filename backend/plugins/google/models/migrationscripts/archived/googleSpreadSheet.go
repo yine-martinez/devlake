@@ -1,6 +1,7 @@
 package archived
 
 import (
+	"github.com/apache/incubator-devlake/core/models/migrationscripts/archived"
 	"github.com/shopspring/decimal"
 )
 
@@ -13,8 +14,9 @@ type GoogleSpreadSheet struct {
 	LeadTime       decimal.Decimal `gorm:"type:decimal(3,1)"`
 	CycleTime      decimal.Decimal `gorm:"type:decimal(3,1)"`
 	FlowEfficiency decimal.Decimal `gorm:"type:decimal(3,1)"`
+	archived.NoPKModel
 }
 
 func (GoogleSpreadSheet) TableName() string {
-	return "_tool_google_spreadSheet"
+	return "_tool_google_spreadsheet"
 }
