@@ -31,52 +31,6 @@ const RAW_SPREADSHEET_TABLE = "google_spreadsheet"
 var _ core.SubTaskEntryPoint = CollectSpreadsheet
 
 func CollectSpreadsheet(taskCtx core.SubTaskContext) errors.Error {
-	/*
-			data := taskCtx.GetData().(*GoogleTaskData)
-			//rawDataSubTaskArgs, data := helper.RawDataSubTaskArgs{} RawCreateRawDataSubTaskArgs(taskCtx, RAW_SPREADSHEET_TABLE)
-			rawDataSubTaskArgs: helper.RawDataSubTaskArgs{
-			Ctx:    taskCtx,
-			Params: GoogleApiParams{},
-			Table:  RAW_SPREADSHEET_TABLE,
-		},
-			//logger := taskCtx.GetLogger()
-
-			collectorWithState, err := helper.NewApiCollectorWithState(*rawDataSubTaskArgs, data.CreatedDateAfter)
-			if err != nil {
-				return err
-			}
-			//incremental := collectorWithState.IsIncremental()
-
-			err = collectorWithState.InitCollector(helper.ApiCollectorArgs{
-				//Incremental: incremental,
-				ApiClient: data.ApiClient,
-				// PageSize:    100,
-				// TODO write which api would you want request
-				//UrlTemplate: "https://script.googleapis.com/v1/scripts/AKfycbxq_dvZPKTsd9rbR8QZnBcsBvmHiNqCOtUscEXOUxM3JaBBNqC5v4gCs-RMlUJVUqJZrw:run",
-				UrlTemplate: "http://localhost:8090/simple",
-				Query: func(reqData *helper.RequestData) (url.Values, errors.Error) {
-					query := url.Values{}
-					//TODO Check if neccesary
-
-						input := reqData.Input.(*helper.DatePair)
-						query.Set("start_time", strconv.FormatInt(input.PairStartTime.Unix(), 10))
-						query.Set("end_time", strconv.FormatInt(input.PairEndTime.Unix(), 10))
-
-
-					return query, nil
-				},
-				ResponseParser: func(res *http.Response) ([]json.RawMessage, errors.Error) {
-					// TODO decode result from api request
-					print(res)
-					return []json.RawMessage{}, nil
-				},
-			})
-			if err != nil {
-				return err
-			}
-			return collectorWithState.Execute()
-
-	*/
 	data := taskCtx.GetData().(*GoogleTaskData)
 
 	collector, err := api.NewApiCollector(api.ApiCollectorArgs{
@@ -88,7 +42,7 @@ func CollectSpreadsheet(taskCtx core.SubTaskContext) errors.Error {
 		ApiClient:   data.ApiClient,
 		Incremental: false,
 
-		UrlTemplate: "/spreadsheets/1TZk0LhUxfhIoRaVMHvOaE5M5iM1uFxXcddUXHMcIKXk/values/B2:J185",
+		UrlTemplate: "/spreadsheets/1TZk0LhUxfhIoRaVMHvOaE5M5iM1uFxXcddUXHMcIKXk/values/B3:J9999",
 
 		Query: func(reqData *api.RequestData) (url.Values, errors.Error) {
 			query := url.Values{}
@@ -98,9 +52,9 @@ func CollectSpreadsheet(taskCtx core.SubTaskContext) errors.Error {
 			println(res)
 
 			body := &struct {
-				Range string          `json:"range"`
-				MajorDimension  string `json:"majorDimension"`
-				Values json.RawMessage `json:"values"`
+				Range          string          `json:"range"`
+				MajorDimension string          `json:"majorDimension"`
+				Values         json.RawMessage `json:"values"`
 			}{}
 			err := api.UnmarshalResponse(res, body)
 			if err != nil {

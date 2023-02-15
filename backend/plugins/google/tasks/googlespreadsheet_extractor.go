@@ -24,8 +24,8 @@ import (
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/google/models"
-	"github.com/shopspring/decimal"
 	"strconv"
+	"strings"
 )
 
 var _ plugin.SubTaskEntryPoint = ExtractGooglespreadsheet
@@ -40,40 +40,27 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 		Extract: func(resData *helper.RawData) ([]interface{}, errors.Error) {
 			extractedModels := make([]interface{}, 0)
 			extractedData := make([]interface{}, 0)
-			println("-----------------")
 			json.Unmarshal(resData.Data, &extractedData)
-			// TODO decode some db models from api result
-			println("-----------------")
-
 			for _, value := range extractedData {
-				fmt.Println(value)
 				data := &response{}
 				b, _ := json.Marshal(value)
 				json.Unmarshal(b, &data)
-				fmt.Println(data.Team)
-				fmt.Println(data.Sprint)
 				sprintInt, _ := strconv.Atoi(data.Sprint)
-				t, error := decimal.NewFromString(data.Throughput)
-				if error != nil {
-					t = decimal.NewFromInt(0)
-				}
-				l, error := decimal.NewFromString(data.LeadTime)
-				if error != nil {
-					l = decimal.NewFromInt(0)
-				}
-				c, error := decimal.NewFromString(data.CycleTime)
-				if data.CycleTime != "" {
-					c = decimal.NewFromInt(0)
-				}
-				f, error := decimal.NewFromString(data.FlowEfficiency)
-				if error != nil {
-					f = decimal.NewFromInt(0)
+				t, _ := strconv.ParseFloat(data.Throughput, 8)
+				l, _ := strconv.ParseFloat(data.LeadTime, 8)
+				c, _ := strconv.ParseFloat(data.CycleTime, 8)
+				data.FlowEfficiency = strings.Replace(data.FlowEfficiency, ",", ".", -1)
+				data.FlowEfficiency = strings.Replace(data.FlowEfficiency, "%", "", -1)
+				f, err := strconv.ParseFloat(data.FlowEfficiency, 8)
+				if err != nil {
+					fmt.Println(err)
 				}
 				extractedModels = append(extractedModels, &models.GoogleSpreadSheet{
 					Team:           data.Team,
 					Sprint:         sprintInt,
 					Tribe:          data.Tribe,
 					Q:              data.Q,
+					Dates:          data.Dates,
 					Throughput:     t,
 					LeadTime:       l,
 					CycleTime:      c,
@@ -96,6 +83,7 @@ type response struct {
 	Sprint         string
 	Tribe          string
 	Q              string
+	Dates          string
 	Throughput     string
 	LeadTime       string
 	CycleTime      string
@@ -103,7 +91,7 @@ type response struct {
 }
 
 func (r *response) UnmarshalJSON(b []byte) error {
-	a := []interface{}{&r.Team, &r.Sprint, &r.Tribe, &r.Q, &r.Throughput, &r.LeadTime, &r.CycleTime, &r.FlowEfficiency}
+	a := []interface{}{&r.Team, &r.Sprint, &r.Tribe, &r.Q, &r.Dates, &r.Throughput, &r.LeadTime, &r.CycleTime, &r.FlowEfficiency}
 	return json.Unmarshal(b, &a)
 }
 
