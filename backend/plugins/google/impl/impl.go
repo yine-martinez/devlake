@@ -72,6 +72,7 @@ func (p Google) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]i
 		return nil, errors.Default.Wrap(err, "unable to get Google connection by the given connection ID")
 	}
 
+	// TODO Check if here make sense this
 	apiClient, err := tasks.NewGoogleApiClient(taskCtx, connection)
 	if err != nil {
 		return nil, errors.Default.Wrap(err, "unable to get Google API client instance")
