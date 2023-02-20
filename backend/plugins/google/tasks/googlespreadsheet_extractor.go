@@ -45,7 +45,6 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 				data := &response{}
 				b, _ := json.Marshal(value)
 				json.Unmarshal(b, &data)
-				sprintInt, _ := strconv.Atoi(data.Sprint)
 				t, _ := strconv.ParseFloat(data.Throughput, 8)
 				l, _ := strconv.ParseFloat(data.LeadTime, 8)
 				c, _ := strconv.ParseFloat(data.CycleTime, 8)
@@ -57,7 +56,7 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 				}
 				extractedModels = append(extractedModels, &models.GoogleSpreadSheet{
 					Team:           data.Team,
-					Sprint:         sprintInt,
+					Sprint:         data.Sprint,
 					Tribe:          data.Tribe,
 					Q:              data.Q,
 					Dates:          data.Dates,
