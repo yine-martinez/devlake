@@ -29,6 +29,7 @@ import (
 )
 
 func NewZentaoApiClient(taskCtx plugin.TaskContext, connection *models.ZentaoConnection) (*api.ApiAsyncClient, error) {
+
 	authApiClient, err := api.NewApiClient(taskCtx.GetContext(), connection.Endpoint, nil, 0, connection.Proxy, taskCtx)
 	if err != nil {
 		return nil, err

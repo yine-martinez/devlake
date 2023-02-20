@@ -25,7 +25,6 @@ import (
 	"github.com/apache/incubator-devlake/core/plugin"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 	"hash/fnv"
 	"io/ioutil"
 	"log"
@@ -46,21 +45,26 @@ import (
 
 var cacheToken = flag.Bool("cachetoken", true, "cache the OAuth 2.0 token")
 
-func NewGoogleApiClient(taskCtx plugin.TaskContext, connection *models.GoogleConnection) (*api.ApiAsyncClient, errors.Error) {
+func NewGoogleApiClient(taskCtx plugin.TaskContext, connection *models.GoogleConnection, token string) (*api.ApiAsyncClient, errors.Error) {
+	fmt.Println("----------------")
+	fmt.Println(taskCtx.GetContext())
+	/*
+		b, er := os.ReadFile("credentials.json")
+		if er != nil {
+			log.Fatalf("Unable to read client secret file: %v", er)
+		}
 
-	b, er := os.ReadFile("credentials.json")
-	if er != nil {
-		log.Fatalf("Unable to read client secret file: %v", er)
-	}
+		// If modifying these scopes, delete your previously saved token.json.
+		config, er := google.ConfigFromJSON(b, "https://www.googleapis.com/auth/spreadsheets")
+		if er != nil {
+			log.Fatalf("Unable to parse client secret file to config: %v", er)
+		}
+		ctx := context.Background()
+		fmt.Println(taskCtx.GetContext())
+		token := NewOAuthClient(ctx, config)
 
-	// If modifying these scopes, delete your previously saved token.json.
-	config, er := google.ConfigFromJSON(b, "https://www.googleapis.com/auth/spreadsheets")
-	if er != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", er)
-	}
-	ctx := context.Background()
-	token := newOAuthClient(ctx, config)
 
+	*/
 	headers := map[string]string{
 		"Authorization": fmt.Sprintf("Bearer %v", token),
 	}
@@ -332,18 +336,20 @@ func saveToken(file string, token *oauth2.Token) {
 	gob.NewEncoder(f).Encode(token)
 }
 
-func newOAuthClient(ctx context.Context, config *oauth2.Config) string {
-	//TODO remove to this to function. Still has the problem with the context when we need the token. Maybe it can be
+func NewOAuthClient(ctx context.Context, config *oauth2.Config) string {
+	//TODO remove  this to function. Still has the problem with the context when we need the token. Maybe it can be
 	// another app or another process. Maybe another task?
-	cacheFile := tokenCacheFile(config)
-	token, err := tokenFromFile(cacheFile)
-	if err != nil {
-		token = tokenFromWeb(ctx, config)
-		saveToken(cacheFile, token)
-	} else {
-		log.Printf("Using cached token %#v from %q", token, cacheFile)
-	}
-
+	/*
+		cacheFile := tokenCacheFile(config)
+		token, err := tokenFromFile(cacheFile)
+		if err != nil {
+			token = tokenFromWeb(ctx, config)
+			saveToken(cacheFile, token)
+		} else {
+			log.Printf("Using cached token %#v from %q", token, cacheFile)
+		}
+	*/
+	token := tokenFromWeb(ctx, config)
 	return token.AccessToken
 }
 
@@ -382,6 +388,7 @@ func tokenFromWeb(ctx context.Context, config *oauth2.Config) *oauth2.Token {
 	if err != nil {
 		log.Fatalf("Token exchange error: %v", err)
 	}
+	fmt.Println(ctx)
 	return token
 }
 

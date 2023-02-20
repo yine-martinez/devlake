@@ -35,6 +35,7 @@ import { StarRocksConfig } from './register/starrocks';
 import { TAPDConfig } from './register/tapd';
 import { WebhookConfig } from './register/webook';
 import { ZenTaoConfig } from './register/zentao';
+import { GoogleConfig } from '@/plugins/register/google';
 
 export const PluginConfig: PluginConfigType[] = [
   AEConfig,
@@ -55,4 +56,5 @@ export const PluginConfig: PluginConfigType[] = [
   TAPDConfig,
   ZenTaoConfig,
   WebhookConfig,
+  GoogleConfig,
 ];

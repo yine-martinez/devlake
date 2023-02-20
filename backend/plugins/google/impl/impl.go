@@ -18,6 +18,7 @@ limitations under the License.
 package impl
 
 import (
+	context2 "context"
 	"fmt"
 	"github.com/apache/incubator-devlake/core/context"
 	"github.com/apache/incubator-devlake/core/errors"
@@ -27,6 +28,9 @@ import (
 	"github.com/apache/incubator-devlake/plugins/google/models"
 	"github.com/apache/incubator-devlake/plugins/google/models/migrationscripts"
 	"github.com/apache/incubator-devlake/plugins/google/tasks"
+	"golang.org/x/oauth2/google"
+	"log"
+	"os"
 	"time"
 )
 
@@ -73,7 +77,19 @@ func (p Google) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]i
 	}
 
 	// TODO Check if here make sense this
-	apiClient, err := tasks.NewGoogleApiClient(taskCtx, connection)
+	b, er := os.ReadFile("credentials.json")
+	if er != nil {
+		log.Fatalf("Unable to read client secret file: %v", er)
+	}
+
+	// If modifying these scopes, delete your previously saved token.json.
+	config, er := google.ConfigFromJSON(b, "https://www.googleapis.com/auth/spreadsheets")
+	if er != nil {
+		log.Fatalf("Unable to parse client secret file to config: %v", er)
+	}
+	token := tasks.NewOAuthClient(context2.Background(), config)
+
+	apiClient, err := tasks.NewGoogleApiClient(taskCtx, connection, token)
 	if err != nil {
 		return nil, errors.Default.Wrap(err, "unable to get Google API client instance")
 	}

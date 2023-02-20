@@ -6,7 +6,7 @@ import (
 
 type GoogleSpreadSheet struct {
 	Team           string `gorm:"primaryKey;type:varchar(100)"`
-	Sprint         int    `gorm:"primaryKey"`
+	Sprint         string `gorm:"primaryKey"`
 	Tribe          string `gorm:"type:varchar(100)"`
 	Q              string `gorm:"type:varchar(100)"`
 	Dates          string `gorm:"type:varchar(255)"`
