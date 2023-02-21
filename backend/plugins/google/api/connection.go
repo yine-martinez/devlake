@@ -38,20 +38,22 @@ func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, 
 		return nil, errors.Convert(e)
 	}
 
-	headers := make(map[string]string)
+	headers := map[string]string{
+		"Authorization": fmt.Sprintf("Bearer %v", connection.Token),
+	}
 	// test connection
 	apiClient, err := api.NewApiClient(
-	context.TODO(),
-	connection.GetEndpoint(),
-	headers,
-	200,
-	"",
-	basicRes,)
+		context.TODO(),
+		connection.GetEndpoint(),
+		headers,
+		200,
+		"",
+		basicRes)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := apiClient.Get("user", nil, nil)
+	res, err := apiClient.Get("spreadsheets/1TZk0LhUxfhIoRaVMHvOaE5M5iM1uFxXcddUXHMcIKXk", nil, nil)
 	if err != nil {
 		return nil, err
 	}

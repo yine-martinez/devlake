@@ -25,7 +25,14 @@ import (
 // This object conforms to what the frontend currently sends.
 type GoogleConnection struct {
 	helper.RestConnection `mapstructure:",squash"`
+	helper.BaseConnection `mapstructure:",squash"`
 	AccessToken           `mapstructure:",squash"`
+	Name                  string `gorm:"type:varchar(100);uniqueIndex" json:"name" validate:"required"`
+	Proxy                 string `json:"proxy"`
+	RateLimitPerHour      int    `comment:"api request rate limit per hour"`
+	SpreadsheetID         string `json:"spreadsheetID"`
+	FirstValue            string `json:"firstValue"`
+	LastValue             string `json:"lastValue"`
 }
 
 type TestConnectionRequest struct {
@@ -36,7 +43,6 @@ type TestConnectionRequest struct {
 type RestConnection struct {
 	helper.RestConnection `mapstructure:",squash"`
 	helper.AccessToken    `mapstructure:",squash"`
-	helper.BaseConnection `mapstructure:",squash"`
 	Endpoint              string `mapstructure:"endpoint" validate:"required" json:"endpoint"`
 }
 

@@ -28,12 +28,18 @@ type GoogleConnection struct {
 }
 
 type RestConnection struct {
-	BaseConnection   `mapstructure:",squash"`
-	Endpoint         string `mapstructure:"endpoint" validate:"required" json:"endpoint"`
+	BaseConnection `mapstructure:",squash"`
+	Endpoint       string `mapstructure:"endpoint" validate:"required" json:"endpoint"`
 }
 
 type BaseConnection struct {
-	Name string `gorm:"type:varchar(100);uniqueIndex" json:"name" validate:"required"`
+	Name             string `gorm:"type:varchar(100);uniqueIndex" json:"name" validate:"required"`
+	Proxy            string `json:"proxy"`
+	RateLimitPerHour int    `comment:"api request rate limit per hour"`
+	SpreadsheetID    string `gorm:"type:varchar(100)"`
+	FirstValue       string `gorm:"type:varchar(10)"`
+	LastValue        string `gorm:"type:varchar(10)"`
+
 	archived.Model
 }
 
