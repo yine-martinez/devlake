@@ -19,7 +19,7 @@
 import { request } from '@/utils';
 
 export const testConnection = (plugin: string, payload: any) =>
-  request(`/plugins/${plugin}/test`, { method: 'post', data: payload });
+  request(`/plugins/${plugin}/test`, { method: 'post', data: payload, timeout: 100000 });
 
 export const createConnection = (plugin: string, payload: any) =>
   request(`/plugins/${plugin}/connections`, { method: 'post', data: payload });

@@ -24,6 +24,9 @@ type TestConnectionPayload = {
   token?: string;
   username?: string;
   password?: string;
+  firstValue?: string;
+  lastValue?: string;
+  spreadsheetID?: string;
 };
 
 export const getConnection = (plugin: string) => request(`/plugins/${plugin}/connections`);

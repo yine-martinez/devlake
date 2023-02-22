@@ -82,6 +82,9 @@ export const useContextValue = ({ plugin, filterBeta = false }: UseContextValueP
         token: it.token,
         username: it.username,
         password: it.password,
+        firstValue: it.firstValue,
+        lastValue: it.lastValue,
+        spreadsheetID: it.spreadsheetID,
       })),
     );
 
@@ -105,7 +108,8 @@ export const useContextValue = ({ plugin, filterBeta = false }: UseContextValueP
         ),
       );
 
-      const { plugin, endpoint, proxy, token, username, password } = selectedConnection;
+      const { plugin, endpoint, proxy, token, username, password, firstValue, lastValue, spreadsheetID } =
+        selectedConnection;
 
       let status = ConnectionStatusEnum.OFFLINE;
 
@@ -116,6 +120,9 @@ export const useContextValue = ({ plugin, filterBeta = false }: UseContextValueP
           token,
           username,
           password,
+          firstValue,
+          lastValue,
+          spreadsheetID,
         });
         status = res.success ? ConnectionStatusEnum.ONLINE : ConnectionStatusEnum.OFFLINE;
       } catch {

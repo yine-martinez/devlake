@@ -98,3 +98,30 @@ export const ConnectionGitLabToken = () => ({
   required: true,
   placeholder: 'eg. ff9d1ad0e5c04f1f98fa',
 });
+
+export const ConnectionSpreadsheetId = (custom = {}) => ({
+  key: 'spreadsheetID',
+  label: 'SpreadSheet',
+  type: 'text' as const,
+  required: true,
+  placeholder: 'eg. ff9d1ad0e5c04f1f98fa',
+  ...custom,
+});
+
+export const ConnectionFirstValue = (custom = {}) => ({
+  key: 'firstValue',
+  label: 'First Value',
+  type: 'text' as const,
+  required: true,
+  placeholder: 'eg. A1',
+  ...custom,
+});
+
+export const ConnectionLastValue = (custom = {}) => ({
+  key: 'lastValue',
+  label: 'Last Value',
+  type: 'text' as const,
+  required: true,
+  placeholder: 'eg. J99999',
+  ...custom,
+});

@@ -36,4 +36,7 @@ export type ConnectionItemType = {
   token?: string;
   username?: string;
   password?: string;
+  spreadsheetID?: string;
+  firstValue?: string;
+  lastValue?: string;
 };

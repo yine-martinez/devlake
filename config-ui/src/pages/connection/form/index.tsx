@@ -56,7 +56,20 @@ export const ConnectionFormPage = () => {
   );
 
   const handleTest = () =>
-    onTest(pick(form, ['endpoint', 'token', 'username', 'password', 'app_id', 'secret_key', 'proxy']));
+    onTest(
+      pick(form, [
+        'endpoint',
+        'token',
+        'username',
+        'password',
+        'app_id',
+        'secret_key',
+        'proxy',
+        'firstValue',
+        'lastValue',
+        'spreadsheetID',
+      ]),
+    );
 
   const handleCancel = () => history.push(`/connections/${plugin}`);
 

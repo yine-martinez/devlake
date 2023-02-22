@@ -26,18 +26,25 @@ import (
 	"github.com/apache/incubator-devlake/plugins/google/models"
 	"github.com/mitchellh/mapstructure"
 	"net/http"
+	"time"
 )
 
 // TODO Please modify the following code to fit your needs
 func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, errors.Error) {
 	// decode
+	fmt.Println("-----------")
+	fmt.Println(input)
+	fmt.Println("-----------Body")
+	fmt.Println(input.Body)
+	fmt.Println("-----------")
+
 	var err errors.Error
 	var connection models.GoogleConnection
 	e := mapstructure.Decode(input.Body, &connection)
 	if e != nil {
 		return nil, errors.Convert(e)
 	}
-
+	fmt.Println(connection)
 	headers := map[string]string{
 		"Authorization": fmt.Sprintf("Bearer %v", connection.Token),
 	}
@@ -46,17 +53,18 @@ func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, 
 		context.TODO(),
 		connection.GetEndpoint(),
 		headers,
-		200,
+		20*time.Second,
 		"",
 		basicRes)
 	if err != nil {
 		return nil, err
 	}
-
-	res, err := apiClient.Get("spreadsheets/1TZk0LhUxfhIoRaVMHvOaE5M5iM1uFxXcddUXHMcIKXk", nil, nil)
+	res, err := apiClient.Get("spreadsheets/"+connection.SpreadsheetID+"/values/"+connection.FirstValue+":"+connection.LastValue,
+		nil, nil)
 	if err != nil {
 		return nil, err
 	}
+
 	resBody := &models.GoogleSpreadSheet{}
 	err = api.UnmarshalResponse(res, resBody)
 	if err != nil {
