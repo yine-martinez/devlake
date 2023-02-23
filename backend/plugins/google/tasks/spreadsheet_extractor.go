@@ -33,11 +33,16 @@ import (
 var _ plugin.SubTaskEntryPoint = ExtractGooglespreadsheet
 
 func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
+	data := taskCtx.GetData().(*GoogleTaskData)
 	extractor, err := helper.NewApiExtractor(helper.ApiExtractorArgs{
 		RawDataSubTaskArgs: helper.RawDataSubTaskArgs{
-			Ctx:    taskCtx,
-			Params: GoogleApiParams{},
-			Table:  RAW_SPREADSHEET_TABLE,
+			Ctx: taskCtx,
+			Params: GoogleApiParams{
+				SpreadsheetID: data.SpreadsheetID,
+				FirstValue:    data.FirstValue,
+				LastValue:     data.LastValue,
+			},
+			Table: RAW_SPREADSHEET_TABLE,
 		},
 		Extract: func(resData *helper.RawData) ([]interface{}, errors.Error) {
 			extractedModels := make([]interface{}, 0)
