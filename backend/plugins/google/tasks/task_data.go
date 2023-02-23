@@ -25,6 +25,9 @@ import (
 )
 
 type GoogleApiParams struct {
+	SpreadsheetID string
+	FirstValue    string
+	LastValue     string
 }
 
 type GoogleOptions struct {
@@ -41,6 +44,9 @@ type GoogleTaskData struct {
 	Options          *GoogleOptions
 	ApiClient        *api.ApiAsyncClient
 	CreatedDateAfter *time.Time
+	SpreadsheetID    string
+	FirstValue       string
+	LastValue        string
 }
 
 func DecodeAndValidateTaskOptions(options map[string]interface{}) (*GoogleOptions, errors.Error) {

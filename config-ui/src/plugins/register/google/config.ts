@@ -57,6 +57,6 @@ export const GoogleConfig: PluginConfigType = {
       ConnectionRatelimit(),
     ],
   },
-  entities: [],
+  entities: ['DATA'],
   transformation: {},
 };

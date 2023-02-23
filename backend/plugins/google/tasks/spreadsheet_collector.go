@@ -32,17 +32,20 @@ var _ core.SubTaskEntryPoint = CollectSpreadsheet
 
 func CollectSpreadsheet(taskCtx core.SubTaskContext) errors.Error {
 	data := taskCtx.GetData().(*GoogleTaskData)
-
 	collector, err := api.NewApiCollector(api.ApiCollectorArgs{
 		RawDataSubTaskArgs: api.RawDataSubTaskArgs{
-			Ctx:    taskCtx,
-			Params: GoogleApiParams{},
-			Table:  RAW_SPREADSHEET_TABLE,
+			Ctx: taskCtx,
+			Params: GoogleApiParams{
+				SpreadsheetID: data.SpreadsheetID,
+				FirstValue:    data.FirstValue,
+				LastValue:     data.LastValue,
+			},
+			Table: RAW_SPREADSHEET_TABLE,
 		},
 		ApiClient:   data.ApiClient,
 		Incremental: false,
 
-		UrlTemplate: "/spreadsheets/1TZk0LhUxfhIoRaVMHvOaE5M5iM1uFxXcddUXHMcIKXk/values/B3:J9999",
+		UrlTemplate: "/spreadsheets/{{ .Params.SpreadsheetID }}/values/{{ .Params.FirstValue }}:{{ .Params.LastValue }}",
 
 		Query: func(reqData *api.RequestData) (url.Values, errors.Error) {
 			query := url.Values{}

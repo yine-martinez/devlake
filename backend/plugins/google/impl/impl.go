@@ -20,6 +20,7 @@ package impl
 import (
 	"fmt"
 	"github.com/apache/incubator-devlake/core/context"
+	"github.com/apache/incubator-devlake/core/dal"
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
@@ -90,8 +91,11 @@ func (p Google) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]i
 		return nil, errors.Default.Wrap(err, "unable to get Google API client instance")
 	}
 	taskData := &tasks.GoogleTaskData{
-		Options:   op,
-		ApiClient: apiClient,
+		Options:       op,
+		ApiClient:     apiClient,
+		SpreadsheetID: connection.SpreadsheetID,
+		FirstValue:    connection.FirstValue,
+		LastValue:     connection.LastValue,
 	}
 	var createdDateAfter time.Time
 	if op.CreatedDateAfter != "" {
@@ -144,4 +148,11 @@ func (p Google) Close(taskCtx plugin.TaskContext) errors.Error {
 	}
 	data.ApiClient.Release()
 	return nil
+}
+
+func (p Google) GetTablesInfo() []dal.Tabler {
+	return []dal.Tabler{
+		&models.GoogleSpreadSheet{},
+		&models.GoogleConnection{},
+	}
 }
