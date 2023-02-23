@@ -20,12 +20,14 @@ package tasks
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/google/models"
-	"strconv"
-	"strings"
 )
 
 var _ plugin.SubTaskEntryPoint = ExtractGooglespreadsheet
@@ -54,6 +56,17 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 				if err != nil {
 					fmt.Println(err)
 				}
+
+				var ss time.Time
+				var es time.Time
+				if data.StartSprint != "" {
+					format := "2006-01-02"
+					ss, _ = time.Parse(format, data.StartSprint)
+					es, _ = time.Parse(format, data.EndSprint)
+				} else {
+					continue
+				}
+
 				extractedModels = append(extractedModels, &models.GoogleSpreadSheet{
 					Team:           data.Team,
 					Sprint:         data.Sprint,
@@ -64,6 +77,8 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 					LeadTime:       l,
 					CycleTime:      c,
 					FlowEfficiency: f,
+					StartSprint:    ss,
+					EndSprint:      es,
 				})
 			}
 
@@ -87,10 +102,12 @@ type response struct {
 	LeadTime       string
 	CycleTime      string
 	FlowEfficiency string
+	StartSprint    string
+	EndSprint      string
 }
 
 func (r *response) UnmarshalJSON(b []byte) error {
-	a := []interface{}{&r.Team, &r.Sprint, &r.Tribe, &r.Q, &r.Dates, &r.Throughput, &r.LeadTime, &r.CycleTime, &r.FlowEfficiency}
+	a := []interface{}{&r.Team, &r.Sprint, &r.Tribe, &r.Q, &r.Dates, &r.Throughput, &r.LeadTime, &r.CycleTime, &r.FlowEfficiency, &r.StartSprint, &r.EndSprint}
 	return json.Unmarshal(b, &a)
 }
 

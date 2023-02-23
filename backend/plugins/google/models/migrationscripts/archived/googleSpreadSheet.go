@@ -1,6 +1,8 @@
 package archived
 
 import (
+	"time"
+
 	"github.com/apache/incubator-devlake/core/models/migrationscripts/archived"
 )
 
@@ -14,6 +16,8 @@ type GoogleSpreadSheet struct {
 	LeadTime       float64
 	CycleTime      float64
 	FlowEfficiency float64
+	StartSprint		time.Time
+	EndSprint		time.Time
 	archived.NoPKModel
 }
 
