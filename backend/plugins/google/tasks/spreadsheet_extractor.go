@@ -36,13 +36,13 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 	data := taskCtx.GetData().(*GoogleTaskData)
 	extractor, err := helper.NewApiExtractor(helper.ApiExtractorArgs{
 		RawDataSubTaskArgs: helper.RawDataSubTaskArgs{
-			Ctx: taskCtx,
+			Ctx:    taskCtx,
 			Params: GoogleApiParams{
 				SpreadsheetID: data.SpreadsheetID,
 				FirstValue:    data.FirstValue,
 				LastValue:     data.LastValue,
 			},
-			Table: RAW_SPREADSHEET_TABLE,
+			Table:  RAW_SPREADSHEET_TABLE,
 		},
 		Extract: func(resData *helper.RawData) ([]interface{}, errors.Error) {
 			extractedModels := make([]interface{}, 0)
@@ -52,6 +52,9 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 				data := &response{}
 				b, _ := json.Marshal(value)
 				json.Unmarshal(b, &data)
+
+				data.Team = strings.TrimSpace(data.Team)
+				data.Q = strings.Replace(data.Q, ",", ".", -1)
 				t, _ := strconv.ParseFloat(data.Throughput, 8)
 				l, _ := strconv.ParseFloat(data.LeadTime, 8)
 				c, _ := strconv.ParseFloat(data.CycleTime, 8)
@@ -61,6 +64,7 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 				if err != nil {
 					fmt.Println(err)
 				}
+
 
 				var ss time.Time
 				var es time.Time
