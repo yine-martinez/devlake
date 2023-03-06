@@ -36,13 +36,13 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 	data := taskCtx.GetData().(*GoogleTaskData)
 	extractor, err := helper.NewApiExtractor(helper.ApiExtractorArgs{
 		RawDataSubTaskArgs: helper.RawDataSubTaskArgs{
-			Ctx:    taskCtx,
+			Ctx: taskCtx,
 			Params: GoogleApiParams{
 				SpreadsheetID: data.SpreadsheetID,
 				FirstValue:    data.FirstValue,
 				LastValue:     data.LastValue,
 			},
-			Table:  RAW_SPREADSHEET_TABLE,
+			Table: RAW_SPREADSHEET_TABLE,
 		},
 		Extract: func(resData *helper.RawData) ([]interface{}, errors.Error) {
 			extractedModels := make([]interface{}, 0)
@@ -58,13 +58,16 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 				t, _ := strconv.ParseFloat(data.Throughput, 8)
 				l, _ := strconv.ParseFloat(data.LeadTime, 8)
 				c, _ := strconv.ParseFloat(data.CycleTime, 8)
-				data.FlowEfficiency = strings.Replace(data.FlowEfficiency, ",", ".", -1)
-				data.FlowEfficiency = strings.Replace(data.FlowEfficiency, "%", "", -1)
-				f, err := strconv.ParseFloat(data.FlowEfficiency, 8)
-				if err != nil {
-					fmt.Println(err)
-				}
 
+				var f float64
+				if data.FlowEfficiency != "" {
+					data.FlowEfficiency = strings.Replace(data.FlowEfficiency, ",", ".", -1)
+					data.FlowEfficiency = strings.Replace(data.FlowEfficiency, "%", "", -1)
+					f, _ = strconv.ParseFloat(data.FlowEfficiency, 8)
+
+				} else {
+					continue
+				}
 
 				var ss time.Time
 				var es time.Time
