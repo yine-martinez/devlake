@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Export a variable named PluginEntry for Framework to search and load
+// PluginEntry is a export a variable for Framework to search and load
 var PluginEntry impl.Google //nolint
 
 // standalone mode for debugging
@@ -35,7 +35,7 @@ func main() {
 
 	cmd.Run = func(cmd *cobra.Command, args []string) {
 		runner.DirectRun(cmd, args, PluginEntry, map[string]interface{}{
-			"connectionId":     *connectionId,
+			"connectionId": *connectionId,
 		})
 	}
 	runner.RunCmd(cmd)

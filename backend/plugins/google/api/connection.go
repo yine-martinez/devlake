@@ -31,18 +31,12 @@ import (
 
 // TODO Please modify the following code to fit your needs
 func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, errors.Error) {
-	// decode
-	fmt.Println("-----------")
-	fmt.Println(input)
-	fmt.Println("-----------Body")
-	fmt.Println(input.Body)
-	fmt.Println("-----------")
 
 	var err errors.Error
 	var connection models.GoogleConnection
-	e := mapstructure.Decode(input.Body, &connection)
-	if e != nil {
-		return nil, errors.Convert(e)
+	errorDecode := mapstructure.Decode(input.Body, &connection)
+	if errorDecode != nil {
+		return nil, errors.Convert(errorDecode)
 	}
 	fmt.Println(connection)
 	headers := map[string]string{

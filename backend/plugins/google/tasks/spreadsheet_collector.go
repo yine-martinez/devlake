@@ -63,7 +63,6 @@ func CollectSpreadsheet(taskCtx core.SubTaskContext) errors.Error {
 			if err != nil {
 				return nil, err
 			}
-			println("receive data:", len(body.Values))
 			return []json.RawMessage{body.Values}, nil
 		},
 	})

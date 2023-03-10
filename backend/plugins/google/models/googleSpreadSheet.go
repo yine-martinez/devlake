@@ -16,8 +16,8 @@ type GoogleSpreadSheet struct {
 	LeadTime       float64
 	CycleTime      float64
 	FlowEfficiency float64
-	StartSprint		time.Time
-	EndSprint		time.Time	
+	StartSprint    time.Time
+	EndSprint      time.Time
 	common.NoPKModel
 }
 

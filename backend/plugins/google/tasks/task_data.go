@@ -20,7 +20,6 @@ package tasks
 import (
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
-	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"time"
 )
 
@@ -51,7 +50,7 @@ type GoogleTaskData struct {
 
 func DecodeAndValidateTaskOptions(options map[string]interface{}) (*GoogleOptions, errors.Error) {
 	var op GoogleOptions
-	if err := helper.Decode(options, &op, nil); err != nil {
+	if err := api.Decode(options, &op, nil); err != nil {
 		return nil, err
 	}
 	if op.ConnectionId == 0 {
