@@ -21,9 +21,9 @@ services:
       - mysql-storage:/var/lib/mysql
     restart: always
     ports:
-      - "127.0.0.1:3306:3306"
+      - 3306:3306
     environment:
-      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_ROOT_PASSWORD: merico
       MYSQL_DATABASE: lake
       MYSQL_USER: merico
       MYSQL_PASSWORD: merico
@@ -38,14 +38,16 @@ services:
   #   environment:
   #     POSTGRES_DB: lake
   #     POSTGRES_USER: merico
-  #     POSTGRES_PASSWORD: merico
+  #     POSTGRES_PASSWORD: "*KE*@baYa65Gpe5#"
 
   grafana:
-    #image: mericodev/devlake-dashboard:latest
+    # image: mericodev/devlake-dashboard:latest
     build:
       context: grafana/
+      dockerfile: Dockerfile
     ports:
       - "3002:3000"
+      - "80:3000"
     volumes:
       - grafana-storage:/var/lib/grafana
     environment:
@@ -60,9 +62,10 @@ services:
       - mysql
 
   devlake:
-    #image: mericodev/devlake:latest
+    # image: mericodev/devlake:latest
     build:
       context: backend
+      dockerfile: Dockerfile
       args:
         HTTPS_PROXY: "${HTTPS_PROXY}"
         GOPROXY: "${GOPROXY}"
@@ -78,18 +81,18 @@ services:
       - mysql
 
   config-ui:
-    #image: mericodev/devlake-config-ui:latest
     build:
+      dockerfile: Dockerfile
       context: "config-ui"
     ports:
-      - "127.0.0.1:4000:4000"
+      - "0.0.0.0:4000:4000"
     env_file:
       - ./.env
     environment:
       DEVLAKE_ENDPOINT: devlake:8080
       GRAFANA_ENDPOINT: grafana:3000
       #ADMIN_USER: devlake
-      #ADMIN_PASS: letsdivein
+      #ADMIN_PASS: 79mG3aosNYJdbYEAX8aj
     depends_on:
       - devlake
 
