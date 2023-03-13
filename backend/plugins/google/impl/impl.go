@@ -73,19 +73,6 @@ func (p Google) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]i
 		return nil, errors.Default.Wrap(err, "unable to get Google connection by the given connection ID")
 	}
 
-	// TODO Check if here make sense this
-	/*	b, er := os.ReadFile("credentials.json")
-		if er != nil {
-			log.Fatalf("Unable to read client secret file: %v", er)
-		}
-
-		// If modifying these scopes, delete your previously saved token.json.
-		config, er := google.ConfigFromJSON(b, "https://www.googleapis.com/auth/spreadsheets")
-		if er != nil {
-			log.Fatalf("Unable to parse client secret file to config: %v", er)
-		}
-		token := tasks.NewOAuthClient(context2.Background(), config)
-	*/
 	apiClient, err := tasks.NewGoogleApiClient(taskCtx, connection)
 	if err != nil {
 		return nil, errors.Default.Wrap(err, "unable to get Google API client instance")
