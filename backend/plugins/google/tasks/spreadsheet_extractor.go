@@ -63,45 +63,12 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 					logger.Error(errUnmarshal, "error unmarshalling rawData json")
 				}
 
-				data.Team = strings.TrimSpace(data.Team)
-				data.Q = strings.Replace(data.Q, ",", ".", -1)
-				throughput, _ := strconv.ParseFloat(data.Throughput, 8) //nolint
-				leadTime, _ := strconv.ParseFloat(data.LeadTime, 8)     //nolint
-				cycleTime, _ := strconv.ParseFloat(data.CycleTime, 8)   //nolint
-
-				var flowEfficiency float64
-				if data.FlowEfficiency != "" {
-					data.FlowEfficiency = strings.Replace(data.FlowEfficiency, ",", ".", -1)
-					data.FlowEfficiency = strings.Replace(data.FlowEfficiency, "%", "", -1)
-					flowEfficiency, _ = strconv.ParseFloat(data.FlowEfficiency, 8) //nolint
-
-				} else {
+				formatedData, err := formatData(data)
+				if err != nil {
 					continue
 				}
 
-				var startSprint time.Time
-				var endSprint time.Time
-				if data.StartSprint != "" {
-					format := "2006-01-02"
-					startSprint, _ = time.Parse(format, data.StartSprint)
-					endSprint, _ = time.Parse(format, data.EndSprint)
-				} else {
-					continue
-				}
-
-				extractedModels = append(extractedModels, &models.GoogleSpreadSheet{
-					Team:           data.Team,
-					Sprint:         data.Sprint,
-					Tribe:          data.Tribe,
-					Q:              data.Q,
-					Dates:          data.Dates,
-					Throughput:     throughput,
-					LeadTime:       leadTime,
-					CycleTime:      cycleTime,
-					FlowEfficiency: flowEfficiency,
-					StartSprint:    startSprint,
-					EndSprint:      endSprint,
-				})
+				extractedModels = append(extractedModels, formatedData)
 			}
 
 			return extractedModels, nil
@@ -138,4 +105,31 @@ var ExtractGooglespreadsheetMeta = plugin.SubTaskMeta{
 	EntryPoint:       ExtractGooglespreadsheet,
 	EnabledByDefault: true,
 	Description:      "Extract raw data into tool layer table google_googlespreadsheet",
+}
+
+func formatData(data *spreadSheetStructure) (*models.GoogleSpreadSheet, errors.Error) {
+	formatedData := &models.GoogleSpreadSheet{}
+	formatedData.Team = strings.TrimSpace(data.Team)
+	formatedData.Q = strings.Replace(data.Q, ",", ".", -1)
+	formatedData.Throughput, _ = strconv.ParseFloat(data.Throughput, 8) //nolint
+	formatedData.LeadTime, _ = strconv.ParseFloat(data.LeadTime, 8)     //nolint
+	formatedData.CycleTime, _ = strconv.ParseFloat(data.CycleTime, 8)   //nolint
+
+	if data.FlowEfficiency != "" {
+		flowEfficiency := strings.Replace(data.FlowEfficiency, ",", ".", -1)
+		flowEfficiency = strings.Replace(data.FlowEfficiency, "%", "", -1)
+		formatedData.FlowEfficiency, _ = strconv.ParseFloat(flowEfficiency, 8) //nolint
+	} else {
+		return formatedData, errors.BadInput.New("Could not format FlowEfficiency")
+	}
+
+	if data.StartSprint != "" {
+		format := "2006-01-02"
+		formatedData.StartSprint, _ = time.Parse(format, data.StartSprint)
+		formatedData.EndSprint, _ = time.Parse(format, data.EndSprint)
+	} else {
+		return formatedData, errors.BadInput.New("Could not format StartSprint")
+	}
+
+	return formatedData, nil
 }
