@@ -63,12 +63,13 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 					logger.Error(errUnmarshal, "error unmarshalling rawData json")
 				}
 
-				formatedData, err := formatData(data)
+				formattedData, err := formatData(data)
 				if err != nil {
+					logger.Error(err, "error formatData")
 					continue
 				}
 
-				extractedModels = append(extractedModels, formatedData)
+				extractedModels = append(extractedModels, formattedData)
 			}
 
 			return extractedModels, nil
@@ -108,28 +109,31 @@ var ExtractGooglespreadsheetMeta = plugin.SubTaskMeta{
 }
 
 func formatData(data *spreadSheetStructure) (*models.GoogleSpreadSheet, errors.Error) {
-	formatedData := &models.GoogleSpreadSheet{}
-	formatedData.Team = strings.TrimSpace(data.Team)
-	formatedData.Q = strings.Replace(data.Q, ",", ".", -1)
-	formatedData.Throughput, _ = strconv.ParseFloat(data.Throughput, 8) //nolint
-	formatedData.LeadTime, _ = strconv.ParseFloat(data.LeadTime, 8)     //nolint
-	formatedData.CycleTime, _ = strconv.ParseFloat(data.CycleTime, 8)   //nolint
+	formattedData := &models.GoogleSpreadSheet{}
+	formattedData.Team = strings.TrimSpace(data.Team)
+	formattedData.Sprint = strings.TrimSpace(data.Sprint)
+	formattedData.Tribe = strings.TrimSpace(data.Tribe)
+	formattedData.Dates = strings.TrimSpace(data.Dates)
+	formattedData.Q = strings.Replace(data.Q, ",", ".", -1)
+	formattedData.Throughput, _ = strconv.ParseFloat(data.Throughput, 8) //nolint
+	formattedData.LeadTime, _ = strconv.ParseFloat(data.LeadTime, 8)     //nolint
+	formattedData.CycleTime, _ = strconv.ParseFloat(data.CycleTime, 8)   //nolint
 
 	if data.FlowEfficiency != "" {
 		flowEfficiency := strings.Replace(data.FlowEfficiency, ",", ".", -1)
 		flowEfficiency = strings.Replace(data.FlowEfficiency, "%", "", -1)
-		formatedData.FlowEfficiency, _ = strconv.ParseFloat(flowEfficiency, 8) //nolint
+		formattedData.FlowEfficiency, _ = strconv.ParseFloat(flowEfficiency, 8) //nolint
 	} else {
-		return formatedData, errors.BadInput.New("Could not format FlowEfficiency")
+		return formattedData, errors.BadInput.New("Could not format FlowEfficiency")
 	}
 
 	if data.StartSprint != "" {
 		format := "2006-01-02"
-		formatedData.StartSprint, _ = time.Parse(format, data.StartSprint)
-		formatedData.EndSprint, _ = time.Parse(format, data.EndSprint)
+		formattedData.StartSprint, _ = time.Parse(format, data.StartSprint)
+		formattedData.EndSprint, _ = time.Parse(format, data.EndSprint)
 	} else {
-		return formatedData, errors.BadInput.New("Could not format StartSprint")
+		return formattedData, errors.BadInput.New("Could not format StartSprint")
 	}
 
-	return formatedData, nil
+	return formattedData, nil
 }

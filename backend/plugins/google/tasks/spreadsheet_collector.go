@@ -52,8 +52,6 @@ func CollectSpreadsheet(taskCtx core.SubTaskContext) errors.Error {
 			return query, nil
 		},
 		ResponseParser: func(res *http.Response) ([]json.RawMessage, errors.Error) {
-			println(res)
-
 			body := &struct {
 				Range          string          `json:"range"`
 				MajorDimension string          `json:"majorDimension"`
