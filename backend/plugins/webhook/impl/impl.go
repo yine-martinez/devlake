@@ -58,7 +58,6 @@ func (p Webhook) RootPkgPath() string {
 }
 
 func (p Webhook) MigrationScripts() []plugin.MigrationScript {
-	//return nil
 	return migrationscripts.All()
 }
 
