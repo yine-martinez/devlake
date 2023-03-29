@@ -16,42 +16,25 @@
  *
  */
 
-import React from 'react';
-
 import type { ScopeItemType } from './types';
-
 import { MillerColumns, RepoSelector } from './components';
+import * as S from './styled';
 
 interface Props {
   connectionId: ID;
-  disabledItems: ScopeItemType[];
   selectedItems: ScopeItemType[];
   onChangeItems: (selectedItems: ScopeItemType[]) => void;
 }
 
-export const GitHubDataScope = ({ connectionId, disabledItems, selectedItems, onChangeItems }: Props) => {
-  const handleChangeItems = (scope: ScopeItemType[]) => {
-    onChangeItems(scope);
-  };
-
+export const GitHubDataScope = ({ connectionId, selectedItems, onChangeItems }: Props) => {
   return (
-    <>
+    <S.DataScope>
       <h3>Repositories *</h3>
       <p>Select the repositories you would like to sync.</p>
-      <MillerColumns
-        connectionId={connectionId}
-        disabledItems={disabledItems}
-        selectedItems={selectedItems}
-        onChangeItems={handleChangeItems}
-      />
+      <MillerColumns connectionId={connectionId} selectedItems={selectedItems} onChangeItems={onChangeItems} />
       <h4>Add repositories outside of your organizations</h4>
       <p>Search for repositories and add to them</p>
-      <RepoSelector
-        connectionId={connectionId}
-        disabledItems={disabledItems}
-        selectedItems={selectedItems}
-        onChangeItems={handleChangeItems}
-      />
-    </>
+      <RepoSelector connectionId={connectionId} selectedItems={selectedItems} onChangeItems={onChangeItems} />
+    </S.DataScope>
   );
 };

@@ -18,12 +18,14 @@ limitations under the License.
 package e2e
 
 import (
+	"github.com/apache/incubator-devlake/plugins/customize/models"
+	"testing"
+
 	"github.com/apache/incubator-devlake/core/models/domainlayer/ticket"
 	"github.com/apache/incubator-devlake/helpers/e2ehelper"
-	"github.com/apache/incubator-devlake/plugins/customize/api"
 	"github.com/apache/incubator-devlake/plugins/customize/impl"
+	"github.com/apache/incubator-devlake/plugins/customize/service"
 	"github.com/apache/incubator-devlake/plugins/customize/tasks"
-	"testing"
 )
 
 func TestBoardDataFlow(t *testing.T) {
@@ -42,7 +44,14 @@ func TestBoardDataFlow(t *testing.T) {
 	// import raw data table
 	dataflowTester.ImportCsvIntoRawTable("./raw_tables/_raw_jira_api_issues.csv", "_raw_jira_api_issues")
 	dataflowTester.ImportCsvIntoTabler("./raw_tables/issues.csv", &ticket.Issue{})
-	err := api.CreateField(dataflowTester.Dal, "issues", "x_test")
+	dataflowTester.FlushTabler(&models.CustomizedField{})
+	svc := service.NewService(dataflowTester.Dal)
+	err := svc.CreateField(&models.CustomizedField{
+		TbName:      "issues",
+		ColumnName:  "x_test",
+		DisplayName: "test column",
+		DataType:    "varchar(255)",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

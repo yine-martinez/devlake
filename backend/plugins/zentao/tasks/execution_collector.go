@@ -23,7 +23,6 @@ import (
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
-	"io"
 	"net/http"
 	"net/url"
 )
@@ -34,19 +33,21 @@ var _ plugin.SubTaskEntryPoint = CollectExecution
 
 func CollectExecution(taskCtx plugin.SubTaskContext) errors.Error {
 	data := taskCtx.GetData().(*ZentaoTaskData)
+	if data.Options.ProjectId == 0 {
+		return nil
+	}
 	collector, err := api.NewApiCollector(api.ApiCollectorArgs{
 		RawDataSubTaskArgs: api.RawDataSubTaskArgs{
 			Ctx: taskCtx,
 			Params: ZentaoApiParams{
 				ConnectionId: data.Options.ConnectionId,
 				ProductId:    data.Options.ProductId,
-				ExecutionId:  data.Options.ExecutionId,
 				ProjectId:    data.Options.ProjectId,
 			},
 			Table: RAW_EXECUTION_TABLE,
 		},
 		ApiClient:   data.ApiClient,
-		UrlTemplate: "executions/{{ .Params.ExecutionId }}",
+		UrlTemplate: "projects/{{ .Params.ProjectId }}/executions",
 		Query: func(reqData *api.RequestData) (url.Values, errors.Error) {
 			query := url.Values{}
 			query.Set("page", fmt.Sprintf("%v", reqData.Pager.Page))
@@ -54,12 +55,14 @@ func CollectExecution(taskCtx plugin.SubTaskContext) errors.Error {
 			return query, nil
 		},
 		ResponseParser: func(res *http.Response) ([]json.RawMessage, errors.Error) {
-			body, err := io.ReadAll(res.Body)
-			if err != nil {
-				return nil, errors.Default.Wrap(err, "error reading endpoint response by Zentao execution collector")
+			var data struct {
+				Executions []json.RawMessage `json:"executions"`
 			}
-			res.Body.Close()
-			return []json.RawMessage{body}, nil
+			err := api.UnmarshalResponse(res, &data)
+			if err != nil {
+				return nil, errors.Default.Wrap(err, "error reading endpoint response by Zentao bug collector")
+			}
+			return data.Executions, nil
 		},
 	})
 	if err != nil {
@@ -74,4 +77,5 @@ var CollectExecutionMeta = plugin.SubTaskMeta{
 	EntryPoint:       CollectExecution,
 	EnabledByDefault: true,
 	Description:      "Collect Execution data from Zentao api",
+	DomainTypes:      []string{plugin.DOMAIN_TYPE_TICKET},
 }

@@ -18,26 +18,27 @@ limitations under the License.
 package tasks
 
 import (
+	"time"
+
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/tapd/models"
-	"time"
 )
 
 type TapdOptions struct {
-	ConnectionId        uint64   `mapstruct:"connectionId"`
-	WorkspaceId         uint64   `mapstruct:"workspaceId"`
-	CompanyId           uint64   `mapstruct:"companyId"`
-	Tasks               []string `mapstruct:"tasks,omitempty"`
-	CreatedDateAfter    string   `json:"createdDateAfter" mapstructure:"createdDateAfter,omitempty"`
+	ConnectionId        uint64 `mapstruct:"connectionId"`
+	WorkspaceId         uint64 `mapstruct:"workspaceId"`
+	CompanyId           uint64 `mapstruct:"companyId"`
+	PageSize            uint64 `mapstruct:"pageSize"`
+	TimeAfter           string `json:"timeAfter" mapstructure:"timeAfter,omitempty"`
 	CstZone             *time.Location
 	TransformationRules TransformationRules `json:"transformationRules"`
 }
 
 type TapdTaskData struct {
-	Options          *TapdOptions
-	ApiClient        *helper.ApiAsyncClient
-	CreatedDateAfter *time.Time
-	Connection       *models.TapdConnection
+	Options    *TapdOptions
+	ApiClient  *helper.ApiAsyncClient
+	TimeAfter  *time.Time
+	Connection *models.TapdConnection
 }
 
 type TypeMapping struct {

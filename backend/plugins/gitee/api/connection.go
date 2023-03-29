@@ -19,49 +19,40 @@ package api
 
 import (
 	"context"
+	"github.com/apache/incubator-devlake/server/api/shared"
+	"net/http"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/gitee/models"
-	"net/http"
-	"net/url"
-	"time"
-
-	"github.com/mitchellh/mapstructure"
 )
 
+type GiteeTestConnResponse struct {
+	shared.ApiBody
+	Connection *models.GiteeConn
+}
+
 // @Summary test gitee connection
-// @Description Test gitee Connection
+// @Description Test gitee Connection. endpoint: https://gitee.com/api/v5/
 // @Tags plugins/gitee
-// @Param body body models.TestConnectionRequest true "json body"
-// @Success 200  {object} shared.ApiBody "Success"
+// @Param body body models.GiteeConn true "json body"
+// @Success 200  {object} GiteeTestConnResponse "Success"
 // @Failure 400  {string} errcode.Error "Bad Request"
 // @Failure 500  {string} errcode.Error "Internal Error"
 // @Router /plugins/gitee/test [POST]
 func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, errors.Error) {
-	var connection models.TestConnectionRequest
-	if err := mapstructure.Decode(input.Body, &connection); err != nil {
+	var err errors.Error
+	var connection models.GiteeConn
+	if err = helper.Decode(input.Body, &connection, vld); err != nil {
 		return nil, errors.BadInput.Wrap(err, "could not decode request parameters")
 	}
-	if err := vld.Struct(connection); err != nil {
-		return nil, errors.BadInput.Wrap(err, "could not validate request parameters")
-	}
-	// test connection
-	apiClient, err := helper.NewApiClient(
-		context.TODO(),
-		connection.Endpoint,
-		nil,
-		3*time.Second,
-		connection.Proxy,
-		basicRes,
-	)
+
+	apiClient, err := helper.NewApiClientFromConnection(context.TODO(), basicRes, &connection)
 	if err != nil {
 		return nil, err
 	}
-	query := url.Values{}
-	query.Set("access_token", connection.Token)
-
-	res, err := apiClient.Get("user", query, nil)
+	res, err := apiClient.Get("user", nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +65,12 @@ func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, 
 	if res.StatusCode != http.StatusOK {
 		return nil, errors.HttpStatus(res.StatusCode).New("unexpected status code when testing connection")
 	}
-	return nil, nil
+	body := GiteeTestConnResponse{}
+	body.Success = true
+	body.Message = "success"
+	body.Connection = &connection
+	// output
+	return &plugin.ApiResourceOutput{Body: body, Status: 200}, nil
 }
 
 // @Summary create gitee connection

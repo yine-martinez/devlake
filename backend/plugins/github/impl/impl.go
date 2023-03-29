@@ -19,6 +19,8 @@ package impl
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/apache/incubator-devlake/core/context"
 	"github.com/apache/incubator-devlake/core/dal"
 	"github.com/apache/incubator-devlake/core/errors"
@@ -28,7 +30,6 @@ import (
 	"github.com/apache/incubator-devlake/plugins/github/models"
 	"github.com/apache/incubator-devlake/plugins/github/models/migrationscripts"
 	"github.com/apache/incubator-devlake/plugins/github/tasks"
-	"time"
 )
 
 var _ plugin.PluginMeta = (*Github)(nil)
@@ -164,21 +165,19 @@ func (p Github) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]i
 		return nil, err
 	}
 
-	var createdDateAfter time.Time
-	if op.CreatedDateAfter != "" {
-		createdDateAfter, err = errors.Convert01(time.Parse(time.RFC3339, op.CreatedDateAfter))
-		if err != nil {
-			return nil, errors.BadInput.Wrap(err, "invalid value for `createdDateAfter`")
-		}
-	}
 	taskData := &tasks.GithubTaskData{
 		Options:   op,
 		ApiClient: apiClient,
 	}
 
-	if !createdDateAfter.IsZero() {
-		taskData.CreatedDateAfter = &createdDateAfter
-		logger.Debug("collect data updated createdDateAfter %s", createdDateAfter)
+	if op.TimeAfter != "" {
+		var timeAfter time.Time
+		timeAfter, err = errors.Convert01(time.Parse(time.RFC3339, op.TimeAfter))
+		if err != nil {
+			return nil, errors.BadInput.Wrap(err, "invalid value for `timeAfter`")
+		}
+		taskData.TimeAfter = &timeAfter
+		logger.Debug("collect data updated timeAfter %s", timeAfter)
 	}
 	return taskData, nil
 }
@@ -205,7 +204,7 @@ func (p Github) ApiResources() map[string]map[string]plugin.ApiResourceHandler {
 			"PATCH":  api.PatchConnection,
 			"DELETE": api.DeleteConnection,
 		},
-		"connections/:connectionId/scopes/:repoId": {
+		"connections/:connectionId/scopes/:scopeId": {
 			"GET":   api.GetScope,
 			"PATCH": api.UpdateScope,
 		},
@@ -213,11 +212,11 @@ func (p Github) ApiResources() map[string]map[string]plugin.ApiResourceHandler {
 			"GET": api.GetScopeList,
 			"PUT": api.PutScope,
 		},
-		"transformation_rules": {
+		"connections/:connectionId/transformation_rules": {
 			"POST": api.CreateTransformationRule,
 			"GET":  api.GetTransformationRuleList,
 		},
-		"transformation_rules/:id": {
+		"connections/:connectionId/transformation_rules/:id": {
 			"PATCH": api.UpdateTransformationRule,
 			"GET":   api.GetTransformationRule,
 		},

@@ -17,54 +17,95 @@
  */
 
 import React from 'react';
+import { Checkbox, Radio } from '@blueprintjs/core';
 
-import { Loading, Card } from '@/components';
+import { TextTooltip } from '@/components';
 
 import { ColumnType } from './types';
+import { TableLoading, TableNoData } from './components';
+import { useRowSelection, UseRowSelectionProps } from './hooks';
 import * as S from './styled';
 
-interface Props<T> {
+interface Props<T> extends UseRowSelectionProps<T> {
   loading?: boolean;
   columns: ColumnType<T>;
   dataSource: T[];
+  noData?: {
+    text?: React.ReactNode;
+    btnText?: string;
+    onCreate?: () => void;
+  };
+  noShadow?: boolean;
 }
 
-export const Table = <T extends Record<string, any>>({ loading, columns, dataSource }: Props<T>) => {
+export const Table = <T extends Record<string, any>>({
+  loading,
+  columns,
+  dataSource,
+  noData = {},
+  rowSelection,
+  noShadow = false,
+}: Props<T>) => {
+  const { canSelection, selectionType, getCheckedAll, onCheckedAll, getChecked, onChecked } = useRowSelection<T>({
+    dataSource,
+    rowSelection,
+  });
+
+  if (loading) {
+    return <TableLoading />;
+  }
+
+  if (!dataSource.length) {
+    return <TableNoData {...noData} />;
+  }
+
   return (
-    <Card style={{ padding: 0 }}>
-      <S.Container>
-        <S.TableWrapper loading={loading ? 1 : 0}>
-          <S.TableHeader>
-            {columns.map(({ key, align = 'left', title }) => (
-              <span key={key} style={{ textAlign: align }}>
-                {title}
-              </span>
-            ))}
-          </S.TableHeader>
-          {dataSource.map((data, i) => (
-            <S.TableRow key={i}>
-              {columns.map(({ key, align = 'left', dataIndex, render }) => {
-                const value = Array.isArray(dataIndex)
-                  ? dataIndex.reduce((acc, cur) => {
-                      acc[cur] = data[cur];
-                      return acc;
-                    }, {} as any)
-                  : data[dataIndex];
-                return (
-                  <span key={key} style={{ textAlign: align }}>
-                    {render ? render(value, data) : value}
-                  </span>
-                );
-              })}
-            </S.TableRow>
+    <S.Table
+      style={{
+        boxShadow: noShadow ? 'none' : '0px 2.4px 4.8px -0.8px rgba(0, 0, 0, 0.1), 0px 1.6px 8px rgba(0, 0, 0, 0.07)',
+      }}
+    >
+      <S.THeader>
+        <S.TR>
+          {canSelection && (
+            <S.TH style={{ width: 40, textAlign: 'center' }}>
+              {selectionType === 'checkbox' && <Checkbox checked={getCheckedAll()} onChange={() => onCheckedAll()} />}
+            </S.TH>
+          )}
+          {columns.map(({ key, width, align = 'left', title }) => (
+            <S.TH key={key} style={{ width, textAlign: align }}>
+              {title}
+            </S.TH>
           ))}
-        </S.TableWrapper>
-        {loading && (
-          <S.TableMask>
-            <Loading />
-          </S.TableMask>
-        )}
-      </S.Container>
-    </Card>
+        </S.TR>
+      </S.THeader>
+      <S.TBody>
+        {dataSource.map((data, i) => (
+          <S.TR key={i}>
+            {canSelection && (
+              <S.TD style={{ width: 40, textAlign: 'center' }}>
+                {selectionType === 'checkbox' && (
+                  <Checkbox checked={getChecked(data)} onChange={() => onChecked(data)} />
+                )}
+                {selectionType === 'radio' && <Radio checked={getChecked(data)} onChange={() => onChecked(data)} />}
+              </S.TD>
+            )}
+            {columns.map(({ key, width, align = 'left', ellipsis, dataIndex, render }) => {
+              const value = Array.isArray(dataIndex)
+                ? dataIndex.reduce((acc, cur) => {
+                    acc[cur] = data[cur];
+                    return acc;
+                  }, {} as any)
+                : data[dataIndex];
+              return (
+                <S.TD key={key} style={{ width, textAlign: align }}>
+                  {render ? render(value, data) : ellipsis ? <TextTooltip content={value}>{value}</TextTooltip> : value}
+                </S.TD>
+              );
+            })}
+          </S.TR>
+        ))}
+      </S.TBody>
+    </S.Table>
   );
 };

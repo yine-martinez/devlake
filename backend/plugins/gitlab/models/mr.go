@@ -18,8 +18,9 @@ limitations under the License.
 package models
 
 import (
-	"github.com/apache/incubator-devlake/core/models/common"
 	"time"
+
+	"github.com/apache/incubator-devlake/core/models/common"
 )
 
 type GitlabMergeRequest struct {
@@ -34,11 +35,13 @@ type GitlabMergeRequest struct {
 	WebUrl           string `gorm:"type:varchar(255)"`
 	UserNotesCount   int
 	WorkInProgress   bool
+	IsDetailRequired bool
 	SourceBranch     string `gorm:"type:varchar(255)"`
 	TargetBranch     string `gorm:"type:varchar(255)"`
 	MergeCommitSha   string `gorm:"type:varchar(255)"`
 	MergedAt         *time.Time
 	GitlabCreatedAt  time.Time
+	GitlabUpdatedAt  *time.Time
 	ClosedAt         *time.Time
 	Type             string `gorm:"type:varchar(255)"`
 	MergedByUsername string `gorm:"type:varchar(255)"`

@@ -20,42 +20,38 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/apache/incubator-devlake/server/api/shared"
+	"net/http"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/tapd/models"
-	"net/http"
-	"time"
 )
+
+type TapdTestConnResponse struct {
+	shared.ApiBody
+	Connection *models.TapdConn
+}
 
 // @Summary test tapd connection
 // @Description Test Tapd Connection
 // @Tags plugins/tapd
-// @Param body body models.TestConnectionRequest true "json body"
-// @Success 200  {object} shared.ApiBody "Success"
+// @Param body body models.TapdConn true "json body"
+// @Success 200  {object} TapdTestConnResponse "Success"
 // @Failure 400  {string} errcode.Error "Bad Request"
 // @Failure 500  {string} errcode.Error "Internal Error"
 // @Router /plugins/tapd/test [POST]
 func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, errors.Error) {
 	// process input
-	var connection models.TestConnectionRequest
+	var connection models.TapdConn
 	err := api.Decode(input.Body, &connection, vld)
 	if err != nil {
 		return nil, err
 	}
 
-	// verify multiple token in parallel
-	// PLEASE NOTE: This works because GitHub API Client rotates tokens on each request
-	apiClient, err := api.NewApiClient(
-		context.TODO(),
-		connection.Endpoint,
-		map[string]string{
-			"Authorization": fmt.Sprintf("Basic %s", connection.GetEncodedToken()),
-		},
-		10*time.Second,
-		connection.Proxy,
-		basicRes,
-	)
+	// test connection
+	apiClient, err := api.NewApiClientFromConnection(context.TODO(), basicRes, &connection)
 	if err != nil {
 		return nil, errors.Default.Wrap(err, fmt.Sprintf("verify token failed for %s", connection.Username))
 	}
@@ -69,8 +65,12 @@ func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, 
 	if res.StatusCode != http.StatusOK {
 		return nil, errors.HttpStatus(res.StatusCode).New(fmt.Sprintf("unexpected status code: %d", res.StatusCode))
 	}
+	body := TapdTestConnResponse{}
+	body.Success = true
+	body.Message = "success"
+	body.Connection = &connection
 	// output
-	return nil, nil
+	return &plugin.ApiResourceOutput{Body: body, Status: 200}, nil
 }
 
 // @Summary create tapd connection

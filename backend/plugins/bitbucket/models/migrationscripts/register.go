@@ -29,5 +29,8 @@ func All() []plugin.MigrationScript {
 		new(addPrCommits20221008),
 		new(addDeployment20221013),
 		new(addRepoIdAndCommitShaField20221014),
+		new(addScope20230206),
+		new(addPipelineStep20230215),
+		new(addConnectionIdToTransformationRule),
 	}
 }

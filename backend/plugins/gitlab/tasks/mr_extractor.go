@@ -19,11 +19,13 @@ package tasks
 
 import (
 	"encoding/json"
+	"regexp"
+	"strings"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/gitlab/models"
-	"regexp"
 )
 
 type MergeRequestRes struct {
@@ -41,6 +43,7 @@ type MergeRequestRes struct {
 	SourceBranch    string           `json:"source_branch"`
 	TargetBranch    string           `json:"target_branch"`
 	GitlabCreatedAt api.Iso8601Time  `json:"created_at"`
+	GitlabUpdatedAt *api.Iso8601Time `json:"updated_at"`
 	MergedAt        *api.Iso8601Time `json:"merged_at"`
 	ClosedAt        *api.Iso8601Time `json:"closed_at"`
 	MergeCommitSha  string           `json:"merge_commit_sha"`
@@ -80,24 +83,28 @@ func ExtractApiMergeRequests(taskCtx plugin.SubTaskContext) errors.Error {
 	var labelTypeRegex *regexp.Regexp
 	var labelComponentRegex *regexp.Regexp
 	var prType = config.PrType
-	var err error
+
+	var err1 error
 	if len(prType) > 0 {
-		labelTypeRegex, err = regexp.Compile(prType)
-		if err != nil {
-			return errors.Default.Wrap(err, "regexp Compile prType failed")
+		labelTypeRegex, err1 = regexp.Compile(prType)
+		if err1 != nil {
+			return errors.Default.Wrap(err1, "regexp Compile prType failed")
 		}
 	}
 	var prComponent = config.PrComponent
 	if len(prComponent) > 0 {
-		labelComponentRegex, err = regexp.Compile(prComponent)
-		if err != nil {
-			return errors.Default.Wrap(err, "regexp Compile prComponent failed")
+		labelComponentRegex, err1 = regexp.Compile(prComponent)
+		if err1 != nil {
+			return errors.Default.Wrap(err1, "regexp Compile prComponent failed")
 		}
 	}
+
 	extractor, err := api.NewApiExtractor(api.ApiExtractorArgs{
 		RawDataSubTaskArgs: *rawDataSubTaskArgs,
 		Extract: func(row *api.RawData) ([]interface{}, errors.Error) {
+
 			mr := &MergeRequestRes{}
+			s := string(row.Data)
 			err := errors.Convert(json.Unmarshal(row.Data, mr))
 			if err != nil {
 				return nil, err
@@ -107,6 +114,15 @@ func ExtractApiMergeRequests(taskCtx plugin.SubTaskContext) errors.Error {
 			if err != nil {
 				return nil, err
 			}
+
+			// if we can not find merged_at and closed_at info in the detail
+			// we need get detail for gitlab v11
+			if !strings.Contains(s, "\"merged_at\":") {
+				if !strings.Contains(s, "\"closed_at\":") {
+					gitlabMergeRequest.IsDetailRequired = true
+				}
+			}
+
 			results := make([]interface{}, 0, len(mr.Reviewers)+1)
 			gitlabMergeRequest.ConnectionId = data.Options.ConnectionId
 			results = append(results, gitlabMergeRequest)
@@ -156,6 +172,7 @@ func ExtractApiMergeRequests(taskCtx plugin.SubTaskContext) errors.Error {
 	}
 
 	return extractor.Execute()
+
 }
 
 func convertMergeRequest(mr *MergeRequestRes) (*models.GitlabMergeRequest, errors.Error) {
@@ -171,11 +188,13 @@ func convertMergeRequest(mr *MergeRequestRes) (*models.GitlabMergeRequest, error
 		WebUrl:           mr.WebUrl,
 		UserNotesCount:   mr.UserNotesCount,
 		WorkInProgress:   mr.WorkInProgress,
+		IsDetailRequired: false,
 		SourceBranch:     mr.SourceBranch,
 		TargetBranch:     mr.TargetBranch,
 		MergeCommitSha:   mr.MergeCommitSha,
 		MergedAt:         api.Iso8601TimeToTime(mr.MergedAt),
 		GitlabCreatedAt:  mr.GitlabCreatedAt.ToTime(),
+		GitlabUpdatedAt:  api.Iso8601TimeToTime(mr.GitlabUpdatedAt),
 		ClosedAt:         api.Iso8601TimeToTime(mr.ClosedAt),
 		MergedByUsername: mr.MergedBy.Username,
 		AuthorUsername:   mr.Author.Username,

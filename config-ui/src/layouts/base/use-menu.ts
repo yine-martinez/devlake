@@ -19,7 +19,6 @@
 import { useMemo } from 'react';
 import { IconName } from '@blueprintjs/core';
 
-import type { PluginConfigConnectionType } from '@/plugins';
 import { PluginConfig, PluginType } from '@/plugins';
 
 export type MenuItemType = {
@@ -31,16 +30,10 @@ export type MenuItemType = {
   children?: MenuItemType[];
   target?: boolean;
   isBeta?: boolean;
+  disabled?: boolean;
 };
 
 export const useMenu = () => {
-  const getGrafanaUrl = () => {
-    const suffix = '/d/lCO8w-pVk/homepage?orgId=1';
-    const { protocol, hostname } = window.location;
-
-    return process.env.LOCAL ? `${protocol}//${hostname}:3002${suffix}` : `/grafana${suffix}`;
-  };
-
   return useMemo(
     () =>
       [
@@ -55,10 +48,8 @@ export const useMenu = () => {
           title: 'Connections',
           icon: 'data-connection',
           path: '/connections',
-          children: (
-            PluginConfig.filter((p) =>
-              [PluginType.Connection, PluginType.Incoming_Connection].includes(p.type),
-            ) as PluginConfigConnectionType[]
+          children: PluginConfig.filter((p) =>
+            [PluginType.Connection, PluginType.Incoming_Connection].includes(p.type),
           ).map((it) => ({
             key: it.plugin,
             title: it.name,
@@ -68,31 +59,25 @@ export const useMenu = () => {
           })),
         },
         {
-          key: 'blueprint',
-          title: 'Blueprints',
-          icon: 'timeline-events',
-          path: '/blueprints',
+          key: 'advanced',
+          title: 'Advanced',
+          icon: 'pulse',
+          // path: '/advanced',
           children: [
             {
-              key: 'create-blueprint',
-              title: 'Create Blueprint',
-              icon: 'git-pull',
-              path: '/blueprints/create',
+              key: 'blueprints',
+              title: 'Blueprints',
+              icon: '',
+              path: '/blueprints',
+            },
+            {
+              key: 'pipelines',
+              title: 'Pipelines',
+              icon: '',
+              path: '/pipelines',
+              disabled: true,
             },
           ],
-        },
-        {
-          key: 'transformation',
-          title: 'Transformation',
-          icon: 'function',
-          path: '/transformations',
-        },
-        {
-          key: 'dashboard',
-          title: 'Dashboard',
-          icon: 'dashboard',
-          path: getGrafanaUrl(),
-          target: true,
         },
       ] as MenuItemType[],
     [],

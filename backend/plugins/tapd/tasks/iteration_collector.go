@@ -20,11 +20,12 @@ package tasks
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
-	"net/http"
-	"net/url"
 )
 
 const RAW_ITERATION_TABLE = "tapd_api_iterations"
@@ -35,7 +36,7 @@ func CollectIterations(taskCtx plugin.SubTaskContext) errors.Error {
 	rawDataSubTaskArgs, data := CreateRawDataSubTaskArgs(taskCtx, RAW_ITERATION_TABLE, false)
 	logger := taskCtx.GetLogger()
 	logger.Info("collect iterations")
-	collectorWithState, err := api.NewApiCollectorWithState(*rawDataSubTaskArgs, data.CreatedDateAfter)
+	collectorWithState, err := api.NewStatefulApiCollector(*rawDataSubTaskArgs, data.TimeAfter)
 	if err != nil {
 		return err
 	}
@@ -43,7 +44,7 @@ func CollectIterations(taskCtx plugin.SubTaskContext) errors.Error {
 	err = collectorWithState.InitCollector(api.ApiCollectorArgs{
 		Incremental: incremental,
 		ApiClient:   data.ApiClient,
-		PageSize:    100,
+		PageSize:    int(data.Options.PageSize),
 		Concurrency: 3,
 		UrlTemplate: "iterations",
 		Query: func(reqData *api.RequestData) (url.Values, errors.Error) {
@@ -52,10 +53,10 @@ func CollectIterations(taskCtx plugin.SubTaskContext) errors.Error {
 			query.Set("page", fmt.Sprintf("%v", reqData.Pager.Page))
 			query.Set("limit", fmt.Sprintf("%v", reqData.Pager.Size))
 			query.Set("order", "created asc")
-			if data.CreatedDateAfter != nil {
-				query.Set("created",
+			if data.TimeAfter != nil {
+				query.Set("modified",
 					fmt.Sprintf(">%s",
-						data.CreatedDateAfter.In(data.Options.CstZone).Format("2006-01-02")))
+						data.TimeAfter.In(data.Options.CstZone).Format("2006-01-02")))
 			}
 			if incremental {
 				query.Set("modified",

@@ -19,11 +19,12 @@ package config
 
 import (
 	"fmt"
-	"github.com/apache/incubator-devlake/core/errors"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/apache/incubator-devlake/core/errors"
 
 	goerror "github.com/cockroachdb/errors"
 
@@ -70,10 +71,12 @@ func getEnvPath() string {
 // Set default value for no .env or .env not set it
 func setDefaultValue(v *viper.Viper) {
 	v.SetDefault("DB_URL", "mysql://merico:merico@mysql:3306/lake?charset=utf8mb4&parseTime=True")
-	v.SetDefault("PORT", ":8080")
+	v.SetDefault("PORT", "8080")
 	v.SetDefault("PLUGIN_DIR", "bin/plugins")
 	v.SetDefault("TEMPORAL_TASK_QUEUE", "DEVLAKE_TASK_QUEUE")
 	v.SetDefault("TAP_PROPERTIES_DIR", "resources/tap")
+	v.SetDefault("ENABLE_REMOTE_PLUGINS", "true")
+	v.SetDefault("REMOTE_PLUGINS_STARTUP_PATH", "python/plugins/start.sh")
 }
 
 // replaceNewEnvItemInOldContent replace old config to new config in env file content

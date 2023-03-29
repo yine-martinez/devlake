@@ -20,6 +20,11 @@ package impl
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"reflect"
+	"strings"
+	"time"
+
 	"github.com/apache/incubator-devlake/core/dal"
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/log"
@@ -31,9 +36,6 @@ import (
 	"github.com/apache/incubator-devlake/plugins/github_graphql/tasks"
 	"github.com/merico-dev/graphql"
 	"golang.org/x/oauth2"
-	"reflect"
-	"strings"
-	"time"
 )
 
 // make sure interface is implemented
@@ -81,7 +83,7 @@ func (p GithubGraphql) SubTaskMetas() []plugin.SubTaskMeta {
 		// collect workflow run & job
 		githubTasks.CollectRunsMeta,
 		githubTasks.ExtractRunsMeta,
-		tasks.CollectCheckRunMeta,
+		tasks.CollectGraphqlJobsMeta,
 
 		// collect others
 		githubTasks.CollectApiCommentsMeta,
@@ -149,20 +151,17 @@ func (p GithubGraphql) PrepareTaskData(taskCtx plugin.TaskContext, options map[s
 	if err != nil {
 		return nil, err
 	}
-	var createdDateAfter time.Time
-	if op.CreatedDateAfter != "" {
-		createdDateAfter, err = errors.Convert01(time.Parse(time.RFC3339, op.CreatedDateAfter))
-		if err != nil {
-			return nil, errors.BadInput.Wrap(err, "invalid value for `createdDateAfter`")
-		}
-	}
 
 	tokens := strings.Split(connection.Token, ",")
 	src := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: tokens[0]},
 	)
 	httpClient := oauth2.NewClient(taskCtx.GetContext(), src)
-	client := graphql.NewClient(connection.Endpoint+`graphql`, httpClient)
+	endpoint, err := errors.Convert01(url.JoinPath(connection.Endpoint, `graphql`))
+	if err != nil {
+		return nil, errors.BadInput.Wrap(err, fmt.Sprintf("malformed connection endpoint supplied: %s", connection.Endpoint))
+	}
+	client := graphql.NewClient(endpoint, httpClient)
 	graphqlClient, err := helper.CreateAsyncGraphqlClient(taskCtx, client, taskCtx.GetLogger(),
 		func(ctx context.Context, client *graphql.Client, logger log.Logger) (rateRemaining int, resetAt *time.Time, err errors.Error) {
 			var query GraphQueryRateLimit
@@ -191,9 +190,14 @@ func (p GithubGraphql) PrepareTaskData(taskCtx plugin.TaskContext, options map[s
 		ApiClient:     apiClient,
 		GraphqlClient: graphqlClient,
 	}
-	if !createdDateAfter.IsZero() {
-		taskData.CreatedDateAfter = &createdDateAfter
-		logger.Debug("collect data updated createdDateAfter %s", createdDateAfter)
+	if op.TimeAfter != "" {
+		var timeAfter time.Time
+		timeAfter, err = errors.Convert01(time.Parse(time.RFC3339, op.TimeAfter))
+		if err != nil {
+			return nil, errors.BadInput.Wrap(err, "invalid value for `timeAfter`")
+		}
+		taskData.TimeAfter = &timeAfter
+		logger.Debug("collect data updated timeAfter %s", timeAfter)
 	}
 
 	return taskData, nil

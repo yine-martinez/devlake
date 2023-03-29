@@ -17,44 +17,37 @@
  */
 
 import type { PluginConfigType } from '@/plugins';
-
-import {
-  BaseConnectionConfig,
-  ConnectionName,
-  ConnectionEndpoint,
-  ConnectionUsername,
-  ConnectionPassword,
-  ConnectionProxy,
-  ConnectionRatelimit,
-} from '../base';
+import { PluginType } from '@/plugins';
 
 import Icon from './assets/icon.svg';
 
 export const ZenTaoConfig: PluginConfigType = {
-  ...BaseConnectionConfig,
+  type: PluginType.Connection,
   plugin: 'zentao',
   name: 'ZenTao',
-  isBeta: true,
   icon: Icon,
+  sort: 100,
   connection: {
-    initialValues: {
-      name: 'ZenTao',
-      endpoint: 'https://your-domain:port/api.php/v1/',
-      rateLimitPerHour: 10000,
-    },
+    docLink: 'https://devlake.apache.org/docs/Configuration/Zentao',
     fields: [
-      ConnectionName({
-        placeholder: 'eg. ZenTao',
-      }),
-      ConnectionEndpoint({
-        placeholder: 'eg. https://your-domain:port/api.php/v1/',
-      }),
-      ConnectionUsername(),
-      ConnectionPassword(),
-      ConnectionProxy(),
-      ConnectionRatelimit(),
+      'name',
+      {
+        key: 'endpoint',
+        subLabel: 'Provide the Zentao instance API endpoint (Opensource v16+). E.g. http://<host>:<port>/api.php/v1',
+      },
+      'username',
+      'password',
+      'proxy',
+      {
+        key: 'rateLimitPerHour',
+        subLabel:
+          'By default, DevLake uses 10,000 requests/hour for data collection for ZenTao. But you can adjust the collection speed by setting up your desirable rate limit.',
+        learnMore: 'https://devlake.apache.org/docs/Configuration/Zentao/#custom-rate-limit-optional',
+        externalInfo: 'ZenTao does not specify a maximum value of rate limit.',
+        defaultValue: 10000,
+      },
     ],
   },
   entities: ['TICKET'],
-  transformation: {},
+  transformation: null,
 };

@@ -34,20 +34,20 @@ var CollectApiIssuesMeta = plugin.SubTaskMeta{
 	Name:             "collectApiIssues",
 	EntryPoint:       CollectApiIssues,
 	EnabledByDefault: true,
-	Description:      "Collect issues data from Github api",
+	Description:      "Collect issues data from Github api, supports both timeFilter and diffSync.",
 	DomainTypes:      []string{plugin.DOMAIN_TYPE_TICKET},
 }
 
 func CollectApiIssues(taskCtx plugin.SubTaskContext) errors.Error {
 	data := taskCtx.GetData().(*GithubTaskData)
-	collectorWithState, err := helper.NewApiCollectorWithState(helper.RawDataSubTaskArgs{
+	collectorWithState, err := helper.NewStatefulApiCollector(helper.RawDataSubTaskArgs{
 		Ctx: taskCtx,
 		Params: GithubApiParams{
 			ConnectionId: data.Options.ConnectionId,
 			Name:         data.Options.Name,
 		},
 		Table: RAW_ISSUE_TABLE,
-	}, data.CreatedDateAfter)
+	}, data.TimeAfter)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,9 @@ func CollectApiIssues(taskCtx plugin.SubTaskContext) errors.Error {
 		Query: func(reqData *helper.RequestData) (url.Values, errors.Error) {
 			query := url.Values{}
 			query.Set("state", "all")
-			// data.CreatedDateAfter need to be used to filter data, but now no params supported
+			if data.TimeAfter != nil {
+				query.Set("since", data.TimeAfter.String())
+			}
 			if incremental {
 				query.Set("since", collectorWithState.LatestState.LatestSuccessStart.String())
 			}

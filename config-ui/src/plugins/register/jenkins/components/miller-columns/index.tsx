@@ -17,47 +17,48 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import type { McsItem } from 'miller-columns-select';
 import MillerColumnsSelect from 'miller-columns-select';
 
 import { Loading } from '@/components';
 
 import type { ScopeItemType } from '../../types';
 
-import type { UseMillerColumnsProps } from './use-miller-columns';
+import type { UseMillerColumnsProps, ExtraType } from './use-miller-columns';
 import { useMillerColumns } from './use-miller-columns';
 
 interface Props extends UseMillerColumnsProps {
-  disabledItems?: ScopeItemType[];
-  selectedItems?: ScopeItemType[];
-  onChangeItems?: (selectedItems: ScopeItemType[]) => void;
+  selectedItems: ScopeItemType[];
+  onChangeItems: (selectedItems: ScopeItemType[]) => void;
 }
 
-export const MillerColumns = ({ connectionId, disabledItems, selectedItems, onChangeItems }: Props) => {
-  const [disabledIds, setDisabledIds] = useState<ID[]>([]);
+export const MillerColumns = ({ connectionId, selectedItems, onChangeItems }: Props) => {
   const [selectedIds, setSelectedIds] = useState<ID[]>([]);
 
-  const { items, getHasMore, onExpandItem } = useMillerColumns({
+  const { items, getHasMore, onExpand } = useMillerColumns({
     connectionId,
   });
 
   useEffect(() => {
-    setDisabledIds((disabledItems ?? []).map((it) => it.jobFullName));
-  }, [disabledItems]);
-
-  useEffect(() => {
-    setSelectedIds((selectedItems ?? []).map((it) => it.jobFullName));
+    setSelectedIds(selectedItems.map((it) => it.jobFullName));
   }, [selectedItems]);
 
   const handleChangeItems = (selectedIds: ID[]) => {
-    const result = items
-      .filter((it) => selectedIds.includes(it.id) && it.type !== 'folder')
-      .map((it: any) => ({
-        connectionId,
-        jobFullName: it.id,
-        name: it.id,
-      }));
+    const result = selectedIds.map((id) => {
+      const selectedItem = selectedItems.find((it) => it.jobFullName === id);
+      if (selectedItem) {
+        return selectedItem;
+      }
 
-    onChangeItems?.(result);
+      const item = items.find((it) => it.id === id) as McsItem<ExtraType>;
+      return {
+        connectionId,
+        jobFullName: item.id as string,
+        name: item.id,
+      };
+    });
+
+    onChangeItems(result);
   };
 
   const renderLoading = () => {
@@ -66,16 +67,15 @@ export const MillerColumns = ({ connectionId, disabledItems, selectedItems, onCh
 
   return (
     <MillerColumnsSelect
+      items={items}
+      getCanExpand={(it) => it.type === 'folder'}
+      onExpand={onExpand}
       columnCount={2.5}
       columnHeight={300}
-      getCanExpand={(it) => it.type === 'folder'}
       getHasMore={getHasMore}
       renderLoading={renderLoading}
-      items={items}
-      disabledIds={disabledIds}
       selectedIds={selectedIds}
       onSelectItemIds={handleChangeItems}
-      onExpandItem={onExpandItem}
     />
   );
 };

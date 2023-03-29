@@ -19,11 +19,13 @@ package impl
 
 import (
 	"fmt"
+
+	"github.com/apache/incubator-devlake/core/dal"
+
 	"github.com/apache/incubator-devlake/core/context"
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
-	"time"
 
 	"github.com/apache/incubator-devlake/plugins/sonarqube/api"
 	"github.com/apache/incubator-devlake/plugins/sonarqube/models"
@@ -32,12 +34,15 @@ import (
 )
 
 // make sure interface is implemented
-var _ plugin.PluginMeta = (*Sonarqube)(nil)
-var _ plugin.PluginInit = (*Sonarqube)(nil)
-var _ plugin.PluginTask = (*Sonarqube)(nil)
-var _ plugin.PluginApi = (*Sonarqube)(nil)
-var _ plugin.PluginBlueprintV100 = (*Sonarqube)(nil)
-var _ plugin.CloseablePluginTask = (*Sonarqube)(nil)
+var _ interface {
+	plugin.PluginMeta
+	plugin.PluginInit
+	plugin.PluginTask
+	plugin.PluginMigration
+	plugin.DataSourcePluginBlueprintV200
+	plugin.CloseablePluginTask
+	plugin.PluginSource
+} = (*Sonarqube)(nil)
 
 type Sonarqube struct{}
 
@@ -50,10 +55,48 @@ func (p Sonarqube) Init(br context.BasicRes) errors.Error {
 	return nil
 }
 
+func (p Sonarqube) Connection() interface{} {
+	return &models.SonarqubeConnection{}
+}
+
+func (p Sonarqube) Scope() interface{} {
+	return &models.SonarqubeProject{}
+}
+
+func (p Sonarqube) TransformationRule() interface{} {
+	return nil
+}
+
+func (p Sonarqube) GetTablesInfo() []dal.Tabler {
+	return []dal.Tabler{
+		&models.SonarqubeConnection{},
+		&models.SonarqubeProject{},
+		&models.SonarqubeIssue{},
+		&models.SonarqubeIssueCodeBlock{},
+		&models.SonarqubeHotspot{},
+		&models.SonarqubeFileMetrics{},
+		&models.SonarqubeAccount{},
+	}
+}
+
 func (p Sonarqube) SubTaskMetas() []plugin.SubTaskMeta {
 	return []plugin.SubTaskMeta{
-		tasks.CollectProjectsMeta,
-		tasks.ExtractProjectsMeta,
+		tasks.CollectIssuesMeta,
+		tasks.ExtractIssuesMeta,
+		tasks.CollectHotspotsMeta,
+		tasks.ExtractHotspotsMeta,
+		tasks.CollectAdditionalFilemetricsMeta,
+		tasks.ExtractAdditionalFileMetricsMeta,
+		tasks.CollectFilemetricsMeta,
+		tasks.ExtractFilemetricsMeta,
+		tasks.CollectAccountsMeta,
+		tasks.ExtractAccountsMeta,
+		tasks.ConvertProjectsMeta,
+		tasks.ConvertIssuesMeta,
+		tasks.ConvertIssueCodeBlocksMeta,
+		tasks.ConvertHotspotsMeta,
+		tasks.ConvertFileMetricsMeta,
+		tasks.ConvertAccountsMeta,
 	}
 }
 
@@ -81,17 +124,22 @@ func (p Sonarqube) PrepareTaskData(taskCtx plugin.TaskContext, options map[strin
 		Options:   op,
 		ApiClient: apiClient,
 	}
-	var createdDateAfter time.Time
-	if op.CreatedDateAfter != "" {
-		createdDateAfter, err = errors.Convert01(time.Parse(time.RFC3339, op.CreatedDateAfter))
-		if err != nil {
-			return nil, errors.BadInput.Wrap(err, "invalid value for `createdDateAfter`")
-		}
+	// even we have project in _tool_sonaqube_projects, we still need to collect project to update LastAnalysisDate
+	var scope models.SonarqubeProject
+	var apiProject *models.SonarqubeApiProject
+	apiProject, err = api.GetApiProject(op.ProjectKey, apiClient)
+	if err != nil {
+		return nil, err
 	}
-	if !createdDateAfter.IsZero() {
-		taskData.CreatedDateAfter = &createdDateAfter
-		logger.Debug("collect data updated createdDateAfter %s", createdDateAfter)
+	logger.Debug(fmt.Sprintf("Current project: %s", apiProject.ProjectKey))
+	scope = apiProject.ConvertApiScope().(models.SonarqubeProject)
+	scope.ConnectionId = op.ConnectionId
+	err = taskCtx.GetDal().CreateOrUpdate(&scope)
+	if err != nil {
+		return nil, err
 	}
+	taskData.LastAnalysisDate = scope.LastAnalysisDate.ToNullableTime()
+
 	return taskData, nil
 }
 
@@ -118,11 +166,25 @@ func (p Sonarqube) ApiResources() map[string]map[string]plugin.ApiResourceHandle
 			"PATCH":  api.PatchConnection,
 			"DELETE": api.DeleteConnection,
 		},
+		"connections/:connectionId/remote-scopes": {
+			"GET": api.RemoteScopes,
+		},
+		"connections/:connectionId/search-remote-scopes": {
+			"GET": api.SearchRemoteScopes,
+		},
+		"connections/:connectionId/scopes/:scopeId": {
+			"GET":   api.GetScope,
+			"PATCH": api.UpdateScope,
+		},
+		"connections/:connectionId/scopes": {
+			"GET": api.GetScopeList,
+			"PUT": api.PutScope,
+		},
 	}
 }
 
-func (p Sonarqube) MakePipelinePlan(connectionId uint64, scope []*plugin.BlueprintScopeV100) (plugin.PipelinePlan, errors.Error) {
-	return api.MakePipelinePlan(p.SubTaskMetas(), connectionId, scope)
+func (p Sonarqube) MakeDataSourcePipelinePlanV200(connectionId uint64, scopes []*plugin.BlueprintScopeV200, syncPolicy plugin.BlueprintSyncPolicy) (pp plugin.PipelinePlan, sc []plugin.Scope, err errors.Error) {
+	return api.MakeDataSourcePipelinePlanV200(p.SubTaskMetas(), connectionId, scopes, &syncPolicy)
 }
 
 func (p Sonarqube) Close(taskCtx plugin.TaskContext) errors.Error {

@@ -18,37 +18,22 @@ limitations under the License.
 package models
 
 import (
-	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
+	"github.com/apache/incubator-devlake/core/plugin"
+	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 )
 
-type EpicResponse struct {
-	Id    int
-	Title string
-	Value string
+var _ plugin.ApiConnection = (*BitbucketConnection)(nil)
+
+// BitbucketConn holds the essential information to connect to the Bitbucket API
+type BitbucketConn struct {
+	api.RestConnection `mapstructure:",squash"`
+	api.BasicAuth      `mapstructure:",squash"`
 }
 
-type TestConnectionRequest struct {
-	Endpoint         string `json:"endpoint"`
-	Proxy            string `json:"proxy"`
-	helper.BasicAuth `mapstructure:",squash"`
-}
-
-type BoardResponse struct {
-	Id    int
-	Title string
-	Value string
-}
-type TransformationRules struct {
-	IssueStatusTODO       []string `mapstructure:"issueStatusTodo" json:"issueStatusTodo"`
-	IssueStatusINPROGRESS []string `mapstructure:"issueStatusInProgress" json:"issueStatusInProgress"`
-	IssueStatusDONE       []string `mapstructure:"issueStatusDone" json:"issueStatusDone"`
-	IssueStatusOTHER      []string `mapstructure:"issueStatusOther" json:"issueStatusOther"`
-}
-
+// BitbucketConnection holds BitbucketConn plus ID/Name for database storage
 type BitbucketConnection struct {
-	helper.BaseConnection `mapstructure:",squash"`
-	helper.RestConnection `mapstructure:",squash"`
-	helper.BasicAuth      `mapstructure:",squash"`
+	api.BaseConnection `mapstructure:",squash"`
+	BitbucketConn      `mapstructure:",squash"`
 }
 
 func (BitbucketConnection) TableName() string {

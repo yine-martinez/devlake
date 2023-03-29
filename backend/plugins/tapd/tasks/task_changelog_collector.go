@@ -19,10 +19,11 @@ package tasks
 
 import (
 	"fmt"
+	"net/url"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
-	"net/url"
 )
 
 const RAW_TASK_CHANGELOG_TABLE = "tapd_api_task_changelogs"
@@ -31,7 +32,7 @@ var _ plugin.SubTaskEntryPoint = CollectTaskChangelogs
 
 func CollectTaskChangelogs(taskCtx plugin.SubTaskContext) errors.Error {
 	rawDataSubTaskArgs, data := CreateRawDataSubTaskArgs(taskCtx, RAW_TASK_CHANGELOG_TABLE, false)
-	collectorWithState, err := helper.NewApiCollectorWithState(*rawDataSubTaskArgs, data.CreatedDateAfter)
+	collectorWithState, err := helper.NewStatefulApiCollector(*rawDataSubTaskArgs, data.TimeAfter)
 	if err != nil {
 		return err
 	}
@@ -42,7 +43,7 @@ func CollectTaskChangelogs(taskCtx plugin.SubTaskContext) errors.Error {
 	err = collectorWithState.InitCollector(helper.ApiCollectorArgs{
 		Incremental: incremental,
 		ApiClient:   data.ApiClient,
-		PageSize:    100,
+		PageSize:    int(data.Options.PageSize),
 		UrlTemplate: "task_changes",
 		Query: func(reqData *helper.RequestData) (url.Values, errors.Error) {
 			query := url.Values{}
@@ -50,10 +51,10 @@ func CollectTaskChangelogs(taskCtx plugin.SubTaskContext) errors.Error {
 			query.Set("page", fmt.Sprintf("%v", reqData.Pager.Page))
 			query.Set("limit", fmt.Sprintf("%v", reqData.Pager.Size))
 			query.Set("order", "created asc")
-			if data.CreatedDateAfter != nil {
+			if data.TimeAfter != nil {
 				query.Set("created",
 					fmt.Sprintf(">%s",
-						data.CreatedDateAfter.In(data.Options.CstZone).Format("2006-01-02")))
+						data.TimeAfter.In(data.Options.CstZone).Format("2006-01-02")))
 			}
 			if incremental {
 				query.Set("created",

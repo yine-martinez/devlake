@@ -19,6 +19,9 @@ package impl
 
 import (
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/apache/incubator-devlake/core/context"
 	"github.com/apache/incubator-devlake/core/dal"
 	"github.com/apache/incubator-devlake/core/errors"
@@ -29,19 +32,19 @@ import (
 	"github.com/apache/incubator-devlake/plugins/jira/models/migrationscripts"
 	"github.com/apache/incubator-devlake/plugins/jira/tasks"
 	"github.com/apache/incubator-devlake/plugins/jira/tasks/apiv2models"
-	"net/http"
-	"time"
 )
 
-var _ plugin.PluginMeta = (*Jira)(nil)
-var _ plugin.PluginInit = (*Jira)(nil)
-var _ plugin.PluginTask = (*Jira)(nil)
-var _ plugin.PluginApi = (*Jira)(nil)
-var _ plugin.PluginModel = (*Jira)(nil)
-var _ plugin.PluginMigration = (*Jira)(nil)
-var _ plugin.PluginBlueprintV100 = (*Jira)(nil)
-var _ plugin.CloseablePluginTask = (*Jira)(nil)
-var _ plugin.PluginSource = (*Jira)(nil)
+var _ interface {
+	plugin.PluginMeta
+	plugin.PluginInit
+	plugin.PluginTask
+	plugin.PluginModel
+	plugin.PluginMigration
+	plugin.PluginBlueprintV100
+	plugin.DataSourcePluginBlueprintV200
+	plugin.CloseablePluginTask
+	plugin.PluginSource
+} = (*Jira)(nil)
 
 type Jira struct {
 }
@@ -104,6 +107,8 @@ func (p Jira) SubTaskMetas() []plugin.SubTaskMeta {
 
 		tasks.CollectIssuesMeta,
 		tasks.ExtractIssuesMeta,
+
+		tasks.ConvertIssueLabelsMeta,
 
 		tasks.CollectIssueChangelogsMeta,
 		tasks.ExtractIssueChangelogsMeta,
@@ -219,14 +224,6 @@ func (p Jira) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]int
 		}
 	}
 
-	var createdDateAfter time.Time
-	if op.CreatedDateAfter != "" {
-		createdDateAfter, err = errors.Convert01(time.Parse(time.RFC3339, op.CreatedDateAfter))
-		if err != nil {
-			return nil, errors.BadInput.Wrap(err, "invalid value for `createdDateAfter`")
-		}
-	}
-
 	info, code, err := tasks.GetJiraServerInfo(jiraApiClient)
 	if err != nil || code != http.StatusOK || info == nil {
 		return nil, errors.HttpStatus(code).Wrap(err, "fail to get Jira server info")
@@ -236,11 +233,15 @@ func (p Jira) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]int
 		ApiClient:      jiraApiClient,
 		JiraServerInfo: *info,
 	}
-	if !createdDateAfter.IsZero() {
-		taskData.CreatedDateAfter = &createdDateAfter
-		logger.Debug("collect data created from %s", createdDateAfter)
+	if op.TimeAfter != "" {
+		var timeAfter time.Time
+		timeAfter, err = errors.Convert01(time.Parse(time.RFC3339, op.TimeAfter))
+		if err != nil {
+			return nil, errors.BadInput.Wrap(err, "invalid value for `timeAfter`")
+		}
+		taskData.TimeAfter = &timeAfter
+		logger.Debug("collect data created from %s", timeAfter)
 	}
-
 	return taskData, nil
 }
 
@@ -282,7 +283,7 @@ func (p Jira) ApiResources() map[string]map[string]plugin.ApiResourceHandler {
 		"connections/:connectionId/proxy/rest/*path": {
 			"GET": api.Proxy,
 		},
-		"connections/:connectionId/scopes/:boardId": {
+		"connections/:connectionId/scopes/:scopeId": {
 			"GET":   api.GetScope,
 			"PATCH": api.UpdateScope,
 		},
@@ -290,11 +291,11 @@ func (p Jira) ApiResources() map[string]map[string]plugin.ApiResourceHandler {
 			"GET": api.GetScopeList,
 			"PUT": api.PutScope,
 		},
-		"transformation_rules": {
+		"connections/:connectionId/transformation_rules": {
 			"POST": api.CreateTransformationRule,
 			"GET":  api.GetTransformationRuleList,
 		},
-		"transformation_rules/:id": {
+		"connections/:connectionId/transformation_rules/:id": {
 			"PATCH": api.UpdateTransformationRule,
 			"GET":   api.GetTransformationRule,
 		},

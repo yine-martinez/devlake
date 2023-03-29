@@ -35,12 +35,12 @@ var ConvertPipelineMeta = plugin.SubTaskMeta{
 	EntryPoint:       ConvertPipelines,
 	EnabledByDefault: true,
 	Description:      "Convert tool layer table bitbucket_pipeline into domain layer table pipeline",
-	DomainTypes:      []string{plugin.DOMAIN_TYPE_CROSS},
+	DomainTypes:      []string{plugin.DOMAIN_TYPE_CICD},
 }
 
 func ConvertPipelines(taskCtx plugin.SubTaskContext) errors.Error {
+	rawDataSubTaskArgs, data := CreateRawDataSubTaskArgs(taskCtx, RAW_PIPELINE_TABLE)
 	db := taskCtx.GetDal()
-	data := taskCtx.GetData().(*BitbucketTaskData)
 
 	cursor, err := db.Cursor(dal.From(models.BitbucketPipeline{}))
 	if err != nil {
@@ -51,17 +51,9 @@ func ConvertPipelines(taskCtx plugin.SubTaskContext) errors.Error {
 	pipelineIdGen := didgen.NewDomainIdGenerator(&models.BitbucketPipeline{})
 
 	converter, err := api.NewDataConverter(api.DataConverterArgs{
-		InputRowType: reflect.TypeOf(models.BitbucketPipeline{}),
-		Input:        cursor,
-		RawDataSubTaskArgs: api.RawDataSubTaskArgs{
-			Ctx: taskCtx,
-			Params: BitbucketApiParams{
-				ConnectionId: data.Options.ConnectionId,
-				Owner:        data.Options.Owner,
-				Repo:         data.Options.Repo,
-			},
-			Table: RAW_PIPELINE_TABLE,
-		},
+		InputRowType:       reflect.TypeOf(models.BitbucketPipeline{}),
+		Input:              cursor,
+		RawDataSubTaskArgs: *rawDataSubTaskArgs,
 		Convert: func(inputRow interface{}) ([]interface{}, errors.Error) {
 			bitbucketPipeline := inputRow.(*models.BitbucketPipeline)
 

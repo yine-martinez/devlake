@@ -19,6 +19,8 @@ package impl
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/apache/incubator-devlake/core/context"
 	"github.com/apache/incubator-devlake/core/dal"
 	"github.com/apache/incubator-devlake/core/errors"
@@ -28,7 +30,6 @@ import (
 	"github.com/apache/incubator-devlake/plugins/gitlab/models"
 	"github.com/apache/incubator-devlake/plugins/gitlab/models/migrationscripts"
 	"github.com/apache/incubator-devlake/plugins/gitlab/tasks"
-	"time"
 )
 
 var _ interface {
@@ -98,12 +99,16 @@ func (p Gitlab) SubTaskMetas() []plugin.SubTaskMeta {
 		tasks.ExtractApiIssuesMeta,
 		tasks.CollectApiMergeRequestsMeta,
 		tasks.ExtractApiMergeRequestsMeta,
+		tasks.CollectApiMergeRequestDetailsMeta,
+		tasks.CollectApiMergeRequestDetailsMeta,
 		tasks.CollectApiMrNotesMeta,
 		tasks.ExtractApiMrNotesMeta,
 		tasks.CollectApiMrCommitsMeta,
 		tasks.ExtractApiMrCommitsMeta,
 		tasks.CollectApiPipelinesMeta,
 		tasks.ExtractApiPipelinesMeta,
+		tasks.CollectApiPipelineDetailsMeta,
+		tasks.ExtractApiPipelineDetailsMeta,
 		tasks.CollectApiJobsMeta,
 		tasks.ExtractApiJobsMeta,
 		tasks.EnrichMergeRequestsMeta,
@@ -121,6 +126,11 @@ func (p Gitlab) SubTaskMetas() []plugin.SubTaskMeta {
 		tasks.ConvertPipelineMeta,
 		tasks.ConvertPipelineCommitMeta,
 		tasks.ConvertJobMeta,
+		tasks.CollectApiCommitsMeta,
+		tasks.ExtractApiCommitsMeta,
+		tasks.ExtractApiMergeRequestDetailsMeta,
+		tasks.CollectTagMeta,
+		tasks.ExtractTagMeta,
 	}
 }
 
@@ -146,16 +156,17 @@ func (p Gitlab) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]i
 	if err != nil {
 		return nil, errors.BadInput.Wrap(err, "connection not found")
 	}
+
 	apiClient, err := tasks.NewGitlabApiClient(taskCtx, connection)
 	if err != nil {
 		return nil, err
 	}
 
-	var createdDateAfter time.Time
-	if op.CreatedDateAfter != "" {
-		createdDateAfter, err = errors.Convert01(time.Parse(time.RFC3339, op.CreatedDateAfter))
+	var timeAfter time.Time
+	if op.TimeAfter != "" {
+		timeAfter, err = errors.Convert01(time.Parse(time.RFC3339, op.TimeAfter))
 		if err != nil {
-			return nil, errors.BadInput.Wrap(err, "invalid value for `createdDateAfter`")
+			return nil, errors.BadInput.Wrap(err, "invalid value for `timeAfter`")
 		}
 	}
 
@@ -166,13 +177,14 @@ func (p Gitlab) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]i
 		db := taskCtx.GetDal()
 		err = db.First(&scope, dal.Where("connection_id = ? AND gitlab_id = ?", op.ConnectionId, op.ProjectId))
 		if err != nil && db.IsErrorNotFound(err) {
-			var project *tasks.GitlabApiProject
+			var project *models.GitlabApiProject
 			project, err = api.GetApiProject(op, apiClient)
 			if err != nil {
 				return nil, err
 			}
 			logger.Debug(fmt.Sprintf("Current project: %d", project.GitlabId))
-			scope = tasks.ConvertProject(project)
+			i := project.ConvertApiScope()
+			scope = i.(*models.GitlabProject)
 			scope.ConnectionId = op.ConnectionId
 			err = taskCtx.GetDal().CreateIfNotExist(&scope)
 			if err != nil {
@@ -202,9 +214,9 @@ func (p Gitlab) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]i
 		ApiClient: apiClient,
 	}
 
-	if !createdDateAfter.IsZero() {
-		taskData.CreatedDateAfter = &createdDateAfter
-		logger.Debug("collect data updated createdDateAfter %s", createdDateAfter)
+	if !timeAfter.IsZero() {
+		taskData.TimeAfter = &timeAfter
+		logger.Debug("collect data updated timeAfter %s", timeAfter)
 	}
 	return &taskData, nil
 }
@@ -235,19 +247,25 @@ func (p Gitlab) ApiResources() map[string]map[string]plugin.ApiResourceHandler {
 			"DELETE": api.DeleteConnection,
 			"GET":    api.GetConnection,
 		},
-		"connections/:connectionId/scopes/:projectId": {
+		"connections/:connectionId/scopes/:scopeId": {
 			"GET":   api.GetScope,
 			"PATCH": api.UpdateScope,
+		},
+		"connections/:connectionId/remote-scopes": {
+			"GET": api.RemoteScopes,
+		},
+		"connections/:connectionId/search-remote-scopes": {
+			"GET": api.SearchRemoteScopes,
 		},
 		"connections/:connectionId/scopes": {
 			"GET": api.GetScopeList,
 			"PUT": api.PutScope,
 		},
-		"transformation_rules": {
+		"connections/:connectionId/transformation_rules": {
 			"POST": api.CreateTransformationRule,
 			"GET":  api.GetTransformationRuleList,
 		},
-		"transformation_rules/:id": {
+		"connections/:connectionId/transformation_rules/:id": {
 			"PATCH": api.UpdateTransformationRule,
 			"GET":   api.GetTransformationRule,
 		},

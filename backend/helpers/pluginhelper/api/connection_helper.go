@@ -18,16 +18,14 @@ limitations under the License.
 package api
 
 import (
-	"strconv"
-	"strings"
-
 	"github.com/apache/incubator-devlake/core/context"
 	"github.com/apache/incubator-devlake/core/dal"
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/log"
+	"github.com/apache/incubator-devlake/core/models"
 	plugin "github.com/apache/incubator-devlake/core/plugin"
-	"github.com/apache/incubator-devlake/helpers/pluginhelper/api/apihelperabstract"
 	"github.com/go-playground/validator/v10"
+	"strconv"
 )
 
 // ConnectionApiHelper is used to write the CURD of connection
@@ -61,7 +59,7 @@ func (c *ConnectionApiHelper) Create(connection interface{}, input *plugin.ApiRe
 	if err != nil {
 		return err
 	}
-	return c.save(connection)
+	return c.save(connection, c.db.Create)
 }
 
 // Patch (Modify) a connection record based on request body
@@ -75,7 +73,7 @@ func (c *ConnectionApiHelper) Patch(connection interface{}, input *plugin.ApiRes
 	if err != nil {
 		return err
 	}
-	return c.save(connection)
+	return c.save(connection, c.db.CreateOrUpdate)
 }
 
 // First finds connection from db  by parsing request input and decrypt it
@@ -93,43 +91,36 @@ func (c *ConnectionApiHelper) First(connection interface{}, params map[string]st
 
 // FirstById finds connection from db by id and decrypt it
 func (c *ConnectionApiHelper) FirstById(connection interface{}, id uint64) errors.Error {
-	err := c.db.First(connection, dal.Where("id = ?", id))
-	if err != nil {
-		return err
-	}
-	return nil
+	return CallDB(c.db.First, connection, dal.Where("id = ?", id))
 }
 
 // List returns all connections with password/token decrypted
 func (c *ConnectionApiHelper) List(connections interface{}) errors.Error {
-	err := c.db.All(connections)
-	if err != nil {
-		return err
-	}
-	return nil
+	return CallDB(c.db.All, connections)
 }
 
 // Delete connection
 func (c *ConnectionApiHelper) Delete(connection interface{}) errors.Error {
-	return c.db.Delete(connection)
+	return CallDB(c.db.Delete, connection)
 }
 
 func (c *ConnectionApiHelper) merge(connection interface{}, body map[string]interface{}) errors.Error {
-	if connectionValdiator, ok := connection.(apihelperabstract.ConnectionValidator); ok {
+	connection = models.UnwrapObject(connection)
+	if connectionValidator, ok := connection.(plugin.ConnectionValidator); ok {
 		err := Decode(body, connection, nil)
 		if err != nil {
 			return err
 		}
-		return connectionValdiator.ValidateConnection(connection, c.validator)
+		return connectionValidator.ValidateConnection(connection, c.validator)
 	}
 	return Decode(body, connection, c.validator)
 }
 
-func (c *ConnectionApiHelper) save(connection interface{}) errors.Error {
-	err := c.db.CreateOrUpdate(connection)
+func (c *ConnectionApiHelper) save(connection interface{}, method func(entity interface{}, clauses ...dal.Clause) errors.Error) errors.Error {
+	err := CallDB(method, connection)
 	if err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
-			return errors.BadInput.Wrap(err, "duplicated Connection Name")
+		if c.db.IsDuplicationError(err) {
+			return errors.BadInput.New("the connection name already exists")
 		}
 		return err
 	}

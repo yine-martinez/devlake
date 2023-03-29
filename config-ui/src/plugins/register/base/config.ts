@@ -20,23 +20,17 @@ import { PluginType } from '../../types';
 
 import Icon from './assets/icon.svg';
 
-export const BaseConnectionConfig = {
-  type: PluginType.Connection,
-  plugin: undefined,
-  name: undefined,
-  icon: Icon,
-  isBeta: undefined,
-  connection: {
-    initialValues: [],
-    fields: [],
-  },
-  entities: [],
-  transformation: {},
-} as const;
-
 export const BasePipelineConfig = {
   type: PluginType.Pipeline,
   plugin: undefined,
   name: undefined,
   icon: Icon,
-} as const;
+  sort: 99,
+  connection: {
+    docLink: '',
+    initialValues: {},
+    fields: [],
+  },
+  entities: [],
+  transformation: {},
+};

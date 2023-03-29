@@ -16,7 +16,7 @@
  *
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   FormGroup,
   InputGroup,
@@ -42,6 +42,12 @@ interface Props {
 export const GitHubTransformation = ({ transformation, setTransformation }: Props) => {
   const [enableCICD, setEnableCICD] = useState(1);
   const [openAdditionalSettings, setOpenAdditionalSettings] = useState(false);
+
+  useEffect(() => {
+    if (transformation.refdiff) {
+      setOpenAdditionalSettings(true);
+    }
+  }, [transformation]);
 
   const handleChangeCICDEnable = (e: number) => {
     if (e === 0) {
@@ -91,8 +97,8 @@ export const GitHubTransformation = ({ transformation, setTransformation }: Prop
           <div className="list">
             <FormGroup inline label="Feature">
               <InputGroup
-                placeholder="(feat|feature|proposal|requirement)$"
-                value={transformation.issueTypeRequirement}
+                placeholder="(feat|feature|proposal|requirement)"
+                value={transformation.issueTypeRequirement ?? ''}
                 onChange={(e) =>
                   setTransformation({
                     ...transformation,
@@ -103,8 +109,8 @@ export const GitHubTransformation = ({ transformation, setTransformation }: Prop
             </FormGroup>
             <FormGroup inline label="Bug">
               <InputGroup
-                placeholder="(bug|broken)$"
-                value={transformation.issueTypeBug}
+                placeholder="(bug|broken)"
+                value={transformation.issueTypeBug ?? ''}
                 onChange={(e) =>
                   setTransformation({
                     ...transformation,
@@ -125,8 +131,8 @@ export const GitHubTransformation = ({ transformation, setTransformation }: Prop
               }
             >
               <InputGroup
-                placeholder="(incident|p0|p1|p2)$"
-                value={transformation.issueTypeIncident}
+                placeholder="(incident|failure)"
+                value={transformation.issueTypeIncident ?? ''}
                 onChange={(e) =>
                   setTransformation({
                     ...transformation,
@@ -147,8 +153,8 @@ export const GitHubTransformation = ({ transformation, setTransformation }: Prop
           }
         >
           <InputGroup
-            placeholder="(highest|high|medium|low)$"
-            value={transformation.issuePriority}
+            placeholder="(highest|high|medium|low|p0|p1|p2|p3)"
+            value={transformation.issuePriority ?? ''}
             onChange={(e) =>
               setTransformation({
                 ...transformation,
@@ -167,8 +173,8 @@ export const GitHubTransformation = ({ transformation, setTransformation }: Prop
           }
         >
           <InputGroup
-            placeholder="component/(.*)$"
-            value={transformation.issueComponent}
+            placeholder="component(.*)"
+            value={transformation.issueComponent ?? ''}
             onChange={(e) =>
               setTransformation({
                 ...transformation,
@@ -187,8 +193,8 @@ export const GitHubTransformation = ({ transformation, setTransformation }: Prop
           }
         >
           <InputGroup
-            placeholder="severity/(.*)$"
-            value={transformation.issueSeverity}
+            placeholder="severity(.*)"
+            value={transformation.issueSeverity ?? ''}
             onChange={(e) =>
               setTransformation({
                 ...transformation,
@@ -204,7 +210,7 @@ export const GitHubTransformation = ({ transformation, setTransformation }: Prop
         <h2>CI/CD</h2>
         <h3>
           <span>Deployment</span>
-          <Tag minimal intent={Intent.PRIMARY} style={{ marginLeft: 4, fontWeight: 400 }}>
+          <Tag minimal intent={Intent.PRIMARY}>
             DORA
           </Tag>
         </h3>
@@ -215,56 +221,49 @@ export const GitHubTransformation = ({ transformation, setTransformation }: Prop
         >
           <Radio label="Detect Deployment from Jobs in GitHub Action" value={1} />
           {enableCICD === 1 && (
-            <>
+            <div className="radio">
               <p>
-                Not sure what a GitHub Action is?{' '}
+                Please fill in the following RegEx, as DevLake ONLY accounts for deployments in the production
+                environment for DORA metrics. Not sure what a GitHub Action job is?{' '}
                 <ExternalLink link="https://docs.github.com/en/actions/using-jobs/using-jobs-in-a-workflow">
                   See it here
                 </ExternalLink>
               </p>
-              <div className="radio">
-                <FormGroup
-                  inline
-                  label={
-                    <>
-                      <span>Deployment</span>
-                      <HelpTooltip content="A GitHub Action job with a name that matches the RegEx will be considered as a deployment in DevLake." />
-                    </>
+              <div className="input">
+                <p>The Job name that matches</p>
+                <InputGroup
+                  placeholder="(deploy|push-image)"
+                  value={transformation.deploymentPattern ?? ''}
+                  onChange={(e) =>
+                    setTransformation({
+                      ...transformation,
+                      deploymentPattern: e.target.value,
+                    })
                   }
-                >
-                  <InputGroup
-                    placeholder="(?i)deploy"
-                    value={transformation.deploymentPattern}
-                    onChange={(e) =>
-                      setTransformation({
-                        ...transformation,
-                        deploymentPattern: e.target.value,
-                      })
-                    }
-                  />
-                </FormGroup>
-                <FormGroup
-                  inline
-                  label={
-                    <>
-                      <span>Production</span>
-                      <HelpTooltip content="DevLake is only concerned with deployments in production environment when calculating DORA metrics.A GitHub Action job with a name that matches the given RegEx will be considered as a job in the Production environment. If you leave this field empty, all data will be tagged as in the Production environment." />
-                    </>
-                  }
-                >
-                  <InputGroup
-                    placeholder="(?i)production"
-                    value={transformation.productionPattern}
-                    onChange={(e) =>
-                      setTransformation({
-                        ...transformation,
-                        productionPattern: e.target.value,
-                      })
-                    }
-                  />
-                </FormGroup>
+                />
+                <p>
+                  will be registered as a `Deployment` in DevLake. <span style={{ color: '#E34040' }}>*</span>
+                </p>
               </div>
-            </>
+              <div className="input">
+                <p>The Job name that matches</p>
+                <InputGroup
+                  disabled={!transformation.deploymentPattern}
+                  placeholder="production"
+                  value={transformation.productionPattern ?? ''}
+                  onChange={(e) =>
+                    setTransformation({
+                      ...transformation,
+                      productionPattern: e.target.value,
+                    })
+                  }
+                />
+                <p>
+                  will be registered as a `Deployment` to the Production environment in DevLake.
+                  <HelpTooltip content="If you leave this field empty, all data will be tagged as in the Production environment. " />
+                </p>
+              </div>
+            </div>
           )}
           <Radio label="Not using any GitHub entities as Deployment" value={0} />
         </RadioGroup>
@@ -290,8 +289,8 @@ export const GitHubTransformation = ({ transformation, setTransformation }: Prop
           }
         >
           <InputGroup
-            placeholder="type/(.*)$"
-            value={transformation.prType}
+            placeholder="type(.*)$"
+            value={transformation.prType ?? ''}
             onChange={(e) => setTransformation({ ...transformation, prType: e.target.value })}
           />
         </FormGroup>
@@ -305,8 +304,8 @@ export const GitHubTransformation = ({ transformation, setTransformation }: Prop
           }
         >
           <InputGroup
-            placeholder="component/(.*)$"
-            value={transformation.prComponent}
+            placeholder="component(.*)$"
+            value={transformation.prComponent ?? ''}
             onChange={(e) =>
               setTransformation({
                 ...transformation,
@@ -352,8 +351,8 @@ export const GitHubTransformation = ({ transformation, setTransformation }: Prop
           }
         >
           <TextArea
-            value={transformation.prBodyClosePattern}
-            placeholder="(?mi)(fix|close|resolve|fixes|closes|resolves|fixed|closed|resolved)[\s]*.*(((and )?(#|https:\/\/github.com\/%s\/issues\/)\d+[ ]*)+)"
+            value={transformation.prBodyClosePattern ?? ''}
+            placeholder="(?mi)(fix|close|resolve|fixes|closes|resolves|fixed|closed|resolved)[s]*.*(((and )?(#|https://github.com/%s/%s/issues/)d+[ ]*)+)"
             onChange={(e) =>
               setTransformation({
                 ...transformation,
@@ -369,12 +368,12 @@ export const GitHubTransformation = ({ transformation, setTransformation }: Prop
       {/* Additional Settings */}
       <div className="additional-settings">
         <h2 onClick={handleChangeAdditionalSettingsOpen}>
-          <Icon icon={openAdditionalSettings ? 'chevron-up' : 'chevron-down'} size={18} />
+          <Icon icon={!openAdditionalSettings ? 'chevron-up' : 'chevron-down'} size={18} />
           <span>Additional Settings</span>
         </h2>
         <Collapse isOpen={openAdditionalSettings}>
           <div className="radio">
-            <Radio checked />
+            <Radio defaultChecked />
             <p>
               Enable the <ExternalLink link="https://devlake.apache.org/docs/Plugins/refdiff">RefDiff</ExternalLink>{' '}
               plugin to pre-calculate version-based metrics
@@ -385,7 +384,7 @@ export const GitHubTransformation = ({ transformation, setTransformation }: Prop
             Compare the last
             <InputGroup
               style={{ width: 60 }}
-              value={transformation.refdiff?.tagsOrder}
+              value={transformation.refdiff?.tagsOrder ?? ''}
               onChange={(e) =>
                 setTransformation({
                   ...transformation,
@@ -400,7 +399,7 @@ export const GitHubTransformation = ({ transformation, setTransformation }: Prop
             <InputGroup
               style={{ width: 200 }}
               placeholder="(regex)$"
-              value={transformation.refdiff?.tagsPattern}
+              value={transformation.refdiff?.tagsPattern ?? ''}
               onChange={(e) =>
                 setTransformation({
                   ...transformation,

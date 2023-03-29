@@ -19,10 +19,11 @@ package impl
 
 import (
 	"fmt"
-	"github.com/apache/incubator-devlake/core/context"
-	"github.com/apache/incubator-devlake/core/dal"
 	"strings"
 	"time"
+
+	"github.com/apache/incubator-devlake/core/context"
+	"github.com/apache/incubator-devlake/core/dal"
 
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
@@ -69,7 +70,6 @@ func (p Jenkins) GetTablesInfo() []dal.Tabler {
 		&models.JenkinsJob{},
 		&models.JenkinsJobDag{},
 		&models.JenkinsPipeline{},
-		&models.JenkinsResponse{},
 		&models.JenkinsStage{},
 		&models.JenkinsTask{},
 	}
@@ -124,11 +124,11 @@ func (p Jenkins) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]
 		return nil, err
 	}
 
-	var createdDateAfter time.Time
-	if op.CreatedDateAfter != "" {
-		createdDateAfter, err = errors.Convert01(time.Parse(time.RFC3339, op.CreatedDateAfter))
+	var timeAfter time.Time
+	if op.TimeAfter != "" {
+		timeAfter, err = errors.Convert01(time.Parse(time.RFC3339, op.TimeAfter))
 		if err != nil {
-			return nil, errors.BadInput.Wrap(err, "invalid value for `createdDateAfter`")
+			return nil, errors.BadInput.Wrap(err, "invalid value for `timeAfter`")
 		}
 	}
 	taskData := &tasks.JenkinsTaskData{
@@ -136,9 +136,9 @@ func (p Jenkins) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]
 		ApiClient:  apiClient,
 		Connection: connection,
 	}
-	if !createdDateAfter.IsZero() {
-		taskData.CreatedDateAfter = &createdDateAfter
-		logger.Debug("collect data created from %s", createdDateAfter)
+	if !timeAfter.IsZero() {
+		taskData.TimeAfter = &timeAfter
+		logger.Debug("collect data created from %s", timeAfter)
 	}
 	return taskData, nil
 }
@@ -173,7 +173,7 @@ func (p Jenkins) ApiResources() map[string]map[string]plugin.ApiResourceHandler 
 			"DELETE": api.DeleteConnection,
 			"GET":    api.GetConnection,
 		},
-		"connections/:connectionId/scopes/*fullName": {
+		"connections/:connectionId/scopes/*scopeId": {
 			"GET":   api.GetScope,
 			"PATCH": api.UpdateScope,
 		},
@@ -181,11 +181,11 @@ func (p Jenkins) ApiResources() map[string]map[string]plugin.ApiResourceHandler 
 			"GET": api.GetScopeList,
 			"PUT": api.PutScope,
 		},
-		"transformation_rules": {
+		"connections/:connectionId/transformation_rules": {
 			"POST": api.CreateTransformationRule,
 			"GET":  api.GetTransformationRuleList,
 		},
-		"transformation_rules/:id": {
+		"connections/:connectionId/transformation_rules/:id": {
 			"PATCH": api.UpdateTransformationRule,
 			"GET":   api.GetTransformationRule,
 		},

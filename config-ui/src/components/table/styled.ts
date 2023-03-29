@@ -18,44 +18,44 @@
 
 import styled from 'styled-components';
 
-export const Container = styled.div`
-  position: relative;
+export const Table = styled.table`
+  table-layout: fixed;
+  width: 100%;
+  background-color: #fff;
+  border-radius: 4px;
+  border-spacing: 0;
 `;
 
-export const TableWrapper = styled.ul<{ loading: number }>`
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  transition: opacity 0.3s linear;
-
-  ${({ loading }) => (loading ? 'opacity: 0.2; ' : '')}
+export const THeader = styled.thead`
+  background-color: #f0f4fe;
 `;
 
-export const TableRow = styled.li`
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  border-top: 1px solid #dbe4fd;
+export const TBody = styled.tbody``;
 
-  & > span {
-    flex: 1;
-    overflow: hidden;
+export const TR = styled.tr`
+  &:last-child {
+    td {
+      border-bottom: none;
+    }
   }
 `;
 
-export const TableHeader = styled(TableRow)`
-  font-size: 14px;
-  font-weight: 600;
-  border-top: none;
+export const TH = styled.th`
+  padding: 12px 16px;
+  font-weight: 400;
+  border-bottom: 1px solid #dbdcdf;
+
+  label.bp4-control {
+    margin-bottom: 0;
+  }
 `;
 
-export const TableMask = styled.div`
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+export const TD = styled.td`
+  padding: 12px 16px;
+  border-bottom: 1px solid #dbdcdf;
+  word-break: break-word;
+
+  label.bp4-control {
+    margin-bottom: 0;
+  }
 `;

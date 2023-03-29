@@ -19,10 +19,11 @@ package models
 
 import (
 	"encoding/json"
+	"time"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/models/common"
 	"github.com/apache/incubator-devlake/core/plugin"
-	"time"
 )
 
 const (
@@ -47,11 +48,11 @@ type Blueprint struct {
 }
 
 type BlueprintSettings struct {
-	Version          string          `json:"version" validate:"required,semver,oneof=1.0.0"`
-	CreatedDateAfter *time.Time      `json:"createdDateAfter"`
-	Connections      json.RawMessage `json:"connections" validate:"required"`
-	BeforePlan       json.RawMessage `json:"before_plan"`
-	AfterPlan        json.RawMessage `json:"after_plan"`
+	Version     string          `json:"version" validate:"required,semver,oneof=1.0.0"`
+	TimeAfter   *time.Time      `json:"timeAfter"`
+	Connections json.RawMessage `json:"connections" validate:"required"`
+	BeforePlan  json.RawMessage `json:"before_plan"`
+	AfterPlan   json.RawMessage `json:"after_plan"`
 }
 
 // UnmarshalPlan unmarshals Plan in JSON to strong-typed plugin.PipelinePlan
@@ -59,7 +60,7 @@ func (bp *Blueprint) UnmarshalPlan() (plugin.PipelinePlan, errors.Error) {
 	var plan plugin.PipelinePlan
 	err := errors.Convert(json.Unmarshal(bp.Plan, &plan))
 	if err != nil {
-		return nil, errors.Convert(err)
+		return nil, errors.Default.Wrap(err, `unmarshal plan fail`)
 	}
 	return plan, nil
 }

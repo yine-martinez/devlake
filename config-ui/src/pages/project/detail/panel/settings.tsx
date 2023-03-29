@@ -22,6 +22,7 @@ import { InputGroup, Checkbox, ButtonGroup, Button, Intent } from '@blueprintjs/
 import { Card } from '@/components';
 
 import type { ProjectType } from '../types';
+import * as S from '../styled';
 
 interface Props {
   project: ProjectType;
@@ -43,10 +44,10 @@ export const SettingsPanel = ({ project, onUpdate }: Props) => {
 
   return (
     <Card>
-      <div className="settings">
+      <S.Settings>
         <div className="block">
           <h3>Project Name *</h3>
-          <p>Edit your project name.</p>
+          <p>Edit your project name with letters, numbers, -, _ or /</p>
           <InputGroup value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div className="block">
@@ -58,9 +59,9 @@ export const SettingsPanel = ({ project, onUpdate }: Props) => {
           <p>DORA metrics are four widely-adopted metrics for measuring software delivery performance.</p>
         </div>
         <ButtonGroup>
-          <Button text="Save" intent={Intent.PRIMARY} onClick={handleSave} />
+          <Button text="Save" disabled={!name} intent={Intent.PRIMARY} onClick={handleSave} />
         </ButtonGroup>
-      </div>
+      </S.Settings>
     </Card>
   );
 };

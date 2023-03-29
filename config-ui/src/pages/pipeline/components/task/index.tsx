@@ -55,10 +55,23 @@ export const PipelineTask = ({ task }: Props) => {
         name = `${name}:${options.projectName}`;
         break;
       case ['gitlab'].includes(config.plugin):
-        name = `${name}:projectId:${options.projectId}`;
+        name = `${name}:${options.projectId}`;
         break;
-      case ['jira', 'jenkins'].includes(config.plugin):
+      case ['bitbucket'].includes(config.plugin):
+        name = `${name}:${options.fullName}`;
+        break;
+      case ['jira', 'jenkins', 'tapd'].includes(config.plugin):
         name = `${name}:${options.scopeId}`;
+        break;
+      case ['sonarqube'].includes(config.plugin):
+        name = `${name}:${options.projectKey}`;
+        break;
+      case ['zentao'].includes(config.plugin):
+        if (options.projectId) {
+          name = `${name}:project/${options.projectId}`;
+        } else {
+          name = `${name}:product/${options.productId}`;
+        }
         break;
     }
 

@@ -25,8 +25,8 @@ type PaginationParams = {
 
 export const getUser = (prefix: string) => request(`${prefix}/user`);
 
-export const getUserOrgs = (prefix: string, username: string, params: PaginationParams) =>
-  request(`${prefix}/users/${username}/orgs`, {
+export const getUserOrgs = (prefix: string, params: PaginationParams) =>
+  request(`${prefix}/user/orgs`, {
     method: 'get',
     data: params,
   });
@@ -34,13 +34,20 @@ export const getUserOrgs = (prefix: string, username: string, params: Pagination
 export const getOrgRepos = (prefix: string, org: string, params: PaginationParams) =>
   request(`${prefix}/orgs/${org}/repos`, {
     method: 'get',
-    data: params,
+    data: {
+      ...params,
+      sort: 'full_name',
+    },
   });
 
-export const getUserRepos = (prefix: string, username: string, params: PaginationParams) =>
-  request(`${prefix}/users/${username}/repos`, {
+export const getUserRepos = (prefix: string, params: PaginationParams) =>
+  request(`${prefix}/user/repos`, {
     method: 'get',
-    data: params,
+    data: {
+      ...params,
+      type: 'owner',
+      sort: 'full_name',
+    },
   });
 
 type SearchRepoParams = {
@@ -52,3 +59,5 @@ export const searchRepo = (prefix: string, params: SearchRepoParams) =>
     method: 'get',
     data: params,
   });
+
+export const testConnection = (payload: any) => request('/plugins/github/test', { method: 'post', data: payload });

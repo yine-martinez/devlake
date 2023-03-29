@@ -28,18 +28,15 @@ var PluginEntry impl.Sonarqube //nolint
 // standalone mode for debugging
 func main() {
 	cmd := &cobra.Command{Use: "sonarqube"}
-
 	connectionId := cmd.Flags().Uint64P("connectionId", "c", 0, "sonarqube connection id")
-	projectName := cmd.Flags().StringP("projectName", "o", "", "sonarqube projectName")
-	createdDateAfter := cmd.Flags().StringP("createdDateAfter", "a", "", "collect data that are created after specified time, ie 2006-05-06T07:08:09Z")
+	projectKey := cmd.Flags().StringP("projectKey", "p", "", "sonarqube projectKey")
 	_ = cmd.MarkFlagRequired("connectionId")
-	//_ = cmd.MarkFlagRequired("projectName")
+	//_ = cmd.MarkFlagRequired("projectKey")
 
 	cmd.Run = func(cmd *cobra.Command, args []string) {
 		runner.DirectRun(cmd, args, PluginEntry, map[string]interface{}{
-			"connectionId":     *connectionId,
-			"projectName":      *projectName,
-			"createdDateAfter": *createdDateAfter,
+			"connectionId": *connectionId,
+			"projectKey":   *projectKey,
 		})
 	}
 	runner.RunCmd(cmd)

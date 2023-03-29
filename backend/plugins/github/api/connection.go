@@ -19,16 +19,17 @@ package api
 
 import (
 	"context"
-	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/github/models"
 	"github.com/apache/incubator-devlake/server/api/shared"
-	"net/http"
-	"strings"
-	"time"
 )
+
+var requirePermission = []string{"repo:status", "repo_deployment", "read:user", "read:org"}
 
 type GithubTestConnResponse struct {
 	shared.ApiBody
@@ -38,90 +39,69 @@ type GithubTestConnResponse struct {
 // @Summary test github connection
 // @Description Test github Connection
 // @Tags plugins/github
-// @Param body body models.TestConnectionRequest true "json body"
+// @Param body body models.GithubConn true "json body"
 // @Success 200  {object} GithubTestConnResponse
 // @Failure 400  {string} errcode.Error "Bad Request"
 // @Failure 500  {string} errcode.Error "Internal Error"
 // @Router /plugins/github/test [POST]
 func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, errors.Error) {
 	// process input
-	var params models.TestConnectionRequest
-	err := api.Decode(input.Body, &params, vld)
+	var conn models.GithubConn
+	err := api.Decode(input.Body, &conn, vld)
 	if err != nil {
 		return nil, err
 	}
 
-	tokens := strings.Split(params.Token, ",")
-
-	// verify multiple token in parallel
-	type VerifyResult struct {
-		err   errors.Error
-		login string
+	apiClient, err := api.NewApiClientFromConnection(context.TODO(), basicRes, &conn)
+	if err != nil {
+		return nil, err
 	}
-	results := make(chan VerifyResult)
-	for i := 0; i < len(tokens); i++ {
-		token := tokens[i]
-		j := i + 1
-		go func() {
-			apiClient, err := api.NewApiClient(
-				context.TODO(),
-				params.Endpoint,
-				map[string]string{
-					"Authorization": fmt.Sprintf("Bearer %s", token),
-				},
-				3*time.Second,
-				params.Proxy,
-				basicRes,
-			)
-			if err != nil {
-				results <- VerifyResult{err: errors.BadInput.Wrap(err, fmt.Sprintf("verify token failed for #%d %s", j, token))}
-				return
-			}
-			res, err := apiClient.Get("user", nil, nil)
-			if err != nil {
-				results <- VerifyResult{err: errors.Default.Wrap(err, fmt.Sprintf("verify token failed for #%d %s", j, token))}
-				return
-			}
-			if res.StatusCode != http.StatusOK {
-				results <- VerifyResult{err: errors.HttpStatus(res.StatusCode).New("unexpected status code while testing connection")}
-				return
-			}
-
-			githubUserOfToken := &models.GithubUserOfToken{}
-			err = api.UnmarshalResponse(res, githubUserOfToken)
-			if err != nil {
-				results <- VerifyResult{err: errors.BadInput.Wrap(err, fmt.Sprintf("verify token failed for #%v %s", j, token))}
-				return
-			} else if githubUserOfToken.Login == "" {
-				results <- VerifyResult{err: errors.BadInput.Wrap(err, fmt.Sprintf("invalid token for #%v %s", j, token))}
-				return
-			}
-
-			results <- VerifyResult{login: githubUserOfToken.Login}
-		}()
+	res, err := apiClient.Get("user", nil, nil)
+	if err != nil {
+		return nil, errors.BadInput.Wrap(err, "verify token failed")
 	}
-	// collect verification results
-	logins := make([]string, 0)
-	allErrors := make([]error, 0)
-	i := 0
-	for result := range results {
-		if result.err != nil {
-			allErrors = append(allErrors, result.err)
-		}
-		logins = append(logins, result.login)
-		i++
-		if i == len(tokens) {
-			close(results)
+	if res.StatusCode != http.StatusOK {
+		return nil, errors.HttpStatus(res.StatusCode).New("unexpected status code while testing connection")
+	}
+
+	githubUserOfToken := &models.GithubUserOfToken{}
+	err = api.UnmarshalResponse(res, githubUserOfToken)
+	if err != nil {
+		return nil, errors.BadInput.Wrap(err, "verify token failed")
+	} else if githubUserOfToken.Login == "" {
+		return nil, errors.BadInput.Wrap(err, "invalid token")
+	}
+
+	// for github classic token, check permission
+	if strings.HasPrefix(conn.Token, "ghp_") {
+		scopes := res.Header.Get("X-OAuth-Scopes")
+		for _, permission := range requirePermission {
+			if !strings.Contains(scopes, permission) {
+				if permission == "repo:status" || permission == "repo_deployment" {
+					// If the missing permission is repo:status or repo_deployment, check if the repo permission is present
+					if strings.Contains(scopes, "repo") {
+						continue
+					}
+				}
+				if permission == "read:user" {
+					if strings.Contains(scopes, "user") {
+						continue
+					}
+				}
+				if permission == "read:org" {
+					if strings.Contains(scopes, "admin:org") {
+						continue
+					}
+				}
+				return nil, errors.BadInput.New("insufficient token permission")
+			}
 		}
 	}
-	if len(allErrors) > 0 {
-		return nil, errors.Default.Combine(allErrors)
-	}
 
-	githubApiResponse := GithubTestConnResponse{}
+	githubApiResponse := &GithubTestConnResponse{}
 	githubApiResponse.Success = true
 	githubApiResponse.Message = "success"
-	githubApiResponse.Login = strings.Join(logins, `,`)
+	githubApiResponse.Login = githubUserOfToken.Login
 	return &plugin.ApiResourceOutput{Body: githubApiResponse, Status: http.StatusOK}, nil
 }
 

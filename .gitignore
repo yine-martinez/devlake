@@ -138,9 +138,6 @@ local.js
 .DS_Store
 Thumbs.db
 
-# yarn
-yarn.lock
-
 lake
 *.exe
 *.so
@@ -159,3 +156,7 @@ backend/server/api/docs/swagger.json
 backend/server/api/docs/swagger.yaml
 backend/server/api/docs/docs.go
 *.result/
+
+# python
+*.pyc
+__pycache__

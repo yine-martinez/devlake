@@ -22,12 +22,16 @@ import (
 	gocontext "context"
 	"crypto/tls"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
+	aha "github.com/apache/incubator-devlake/core/plugin"
 	"io"
 	"net/http"
 	"net/url"
+	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -35,27 +39,20 @@ import (
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/log"
 	"github.com/apache/incubator-devlake/core/utils"
-	"github.com/apache/incubator-devlake/helpers/pluginhelper/api/apihelperabstract"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/common"
 )
 
 // ErrIgnoreAndContinue is a error which should be ignored
 var ErrIgnoreAndContinue = errors.Default.New("ignore and continue")
 
-// ApiClientGetter will be used for uint test
-type ApiClientGetter interface {
-	Get(
-		path string,
-		query url.Values,
-		headers http.Header,
-	) (*http.Response, errors.Error)
-}
-
 // ApiClient is designed for simple api requests
 type ApiClient struct {
-	client        *http.Client
-	endpoint      string
-	headers       map[string]string
+	client     *http.Client
+	endpoint   string
+	headers    map[string]string
+	data       map[string]interface{}
+	data_mutex sync.Mutex
+
 	beforeRequest common.ApiClientBeforeRequest
 	afterResponse common.ApiClientAfterResponse
 	ctx           gocontext.Context
@@ -63,22 +60,34 @@ type ApiClient struct {
 }
 
 // NewApiClientFromConnection creates ApiClient based on given connection.
-// The connection must
 func NewApiClientFromConnection(
 	ctx gocontext.Context,
 	br context.BasicRes,
-	connection apihelperabstract.ApiConnection,
+	connection aha.ApiConnection,
 ) (*ApiClient, errors.Error) {
+	if reflect.ValueOf(connection).Kind() != reflect.Ptr {
+		return nil, errors.Default.New("connection is not a pointer")
+	}
 	apiClient, err := NewApiClient(ctx, connection.GetEndpoint(), nil, 0, connection.GetProxy(), br)
 	if err != nil {
 		return nil, err
 	}
+
+	// if connection needs to prepare the ApiClient, i.e. fetch token for future requests
+	if prepareApiClient, ok := connection.(aha.PrepareApiClient); ok {
+		err = prepareApiClient.PrepareApiClient(apiClient)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// if connection requires authorization
-	if authenticator, ok := connection.(apihelperabstract.ApiAuthenticator); ok {
+	if authenticator, ok := connection.(aha.ApiAuthenticator); ok {
 		apiClient.SetBeforeFunction(func(req *http.Request) errors.Error {
 			return authenticator.SetupAuthentication(req)
 		})
 	}
+
 	return apiClient, nil
 }
 
@@ -159,6 +168,7 @@ func (apiClient *ApiClient) Setup(
 	apiClient.client = &http.Client{Timeout: timeout}
 	apiClient.SetEndpoint(endpoint)
 	apiClient.SetHeaders(headers)
+	apiClient.data = map[string]interface{}{}
 }
 
 // SetEndpoint FIXME ...
@@ -179,6 +189,24 @@ func (apiClient *ApiClient) SetTimeout(timeout time.Duration) {
 // GetTimeout FIXME ...
 func (apiClient *ApiClient) GetTimeout() time.Duration {
 	return apiClient.client.Timeout
+}
+
+// SetData FIXME ...
+func (apiClient *ApiClient) SetData(name string, data interface{}) {
+	apiClient.data_mutex.Lock()
+	defer apiClient.data_mutex.Unlock()
+
+	apiClient.data[name] = data
+}
+
+// GetData FIXME ...
+func (apiClient *ApiClient) GetData(name string) interface{} {
+	apiClient.data_mutex.Lock()
+	defer apiClient.data_mutex.Unlock()
+
+	data := apiClient.data[name]
+
+	return data
 }
 
 // SetHeaders FIXME ...
@@ -347,7 +375,21 @@ func UnmarshalResponse(res *http.Response, v interface{}) errors.Error {
 	}
 	err = errors.Convert(json.Unmarshal(resBody, &v))
 	if err != nil {
-		return errors.Default.Wrap(err, fmt.Sprintf("error decoding response from %s: raw response: %s", res.Request.URL.String(), string(resBody)))
+		return errors.Default.New(fmt.Sprintf("error decoding response from %s: raw response: %s", res.Request.URL.String(), string(resBody)))
+	}
+	return nil
+}
+
+// UnmarshalResponseXML FIXME ...
+func UnmarshalResponseXML(res *http.Response, v interface{}) errors.Error {
+	defer res.Body.Close()
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		return errors.Default.Wrap(err, fmt.Sprintf("error reading response from %s", res.Request.URL.String()))
+	}
+	err = errors.Convert(xml.Unmarshal(resBody, &v))
+	if err != nil {
+		return errors.Default.Wrap(err, fmt.Sprintf("error decoding XML response from %s: raw response: %s", res.Request.URL.String(), string(resBody)))
 	}
 	return nil
 }

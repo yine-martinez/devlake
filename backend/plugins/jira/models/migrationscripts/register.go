@@ -30,5 +30,9 @@ func All() []plugin.MigrationScript {
 		new(addTransformationRule20221116),
 		new(addProjectName20221215),
 		new(addJiraMultiAuth20230129),
+		new(removeIssueStdStoryPoint),
+		new(addCommitRepoPattern),
+		new(expandRemotelinkUrl),
+		new(addConnectionIdToTransformationRule),
 	}
 }

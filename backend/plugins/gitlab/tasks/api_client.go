@@ -18,26 +18,21 @@ limitations under the License.
 package tasks
 
 import (
-	"fmt"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/gitlab/models"
-	"net/http"
-	"strconv"
-	"time"
 )
 
-func NewGitlabApiClient(taskCtx plugin.TaskContext, connection *models.GitlabConnection) (*api.ApiAsyncClient, errors.Error) {
-	// create synchronize api client so we can calculate api rate limit dynamically
-	headers := map[string]string{
-		"Authorization": fmt.Sprintf("Bearer %v", connection.Token),
-	}
-	apiClient, err := api.NewApiClient(taskCtx.GetContext(), connection.Endpoint, headers, 0, connection.Proxy, taskCtx)
-	if err != nil {
-		return nil, err
-	}
-
+func CreateGitlabAsyncApiClient(
+	taskCtx plugin.TaskContext,
+	apiClient *api.ApiClient,
+	connection *models.GitlabConnection,
+) (*api.ApiAsyncClient, errors.Error) {
 	// create rate limit calculator
 	rateLimiter := &api.ApiRateLimitCalculator{
 		UserRateLimitPerHour: connection.RateLimitPerHour,
@@ -51,12 +46,7 @@ func NewGitlabApiClient(taskCtx plugin.TaskContext, connection *models.GitlabCon
 			if err != nil {
 				return 0, 0, errors.Default.Wrap(err, "failed to parse RateLimit-Limit header")
 			}
-			// seems like gitlab rate limit is on minute basis
-			if rateLimit > 200 {
-				return 200, 1 * time.Minute, nil
-			} else {
-				return rateLimit, 1 * time.Minute, nil
-			}
+			return rateLimit, 1 * time.Minute, nil
 		},
 	}
 	asyncApiClient, err := api.CreateAsyncApiClient(
@@ -68,6 +58,15 @@ func NewGitlabApiClient(taskCtx plugin.TaskContext, connection *models.GitlabCon
 		return nil, err
 	}
 	return asyncApiClient, nil
+}
+
+func NewGitlabApiClient(taskCtx plugin.TaskContext, connection *models.GitlabConnection) (*api.ApiAsyncClient, errors.Error) {
+	apiClient, err := api.NewApiClientFromConnection(taskCtx.GetContext(), taskCtx, connection)
+	if err != nil {
+		return nil, err
+	}
+
+	return CreateGitlabAsyncApiClient(taskCtx, apiClient, connection)
 }
 
 func ignoreHTTPStatus403(res *http.Response) errors.Error {

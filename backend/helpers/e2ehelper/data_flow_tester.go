@@ -22,6 +22,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/apache/incubator-devlake/core/config"
 	"github.com/apache/incubator-devlake/core/dal"
 	"github.com/apache/incubator-devlake/core/errors"
@@ -34,12 +41,6 @@ import (
 	contextimpl "github.com/apache/incubator-devlake/impls/context"
 	"github.com/apache/incubator-devlake/impls/dalgorm"
 	"github.com/apache/incubator-devlake/impls/logruslog"
-	"os"
-	"strconv"
-	"strings"
-	"sync"
-	"testing"
-	"time"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -88,6 +89,8 @@ type TableOptions struct {
 	// IgnoreTypes similar to IgnoreFields, this will ignore the fields contained in the type. Useful for ignoring embedded
 	// types and their fields in the target model
 	IgnoreTypes []interface{}
+	// if Nullable is set to be true, only the string `NULL` will be taken as NULL
+	Nullable bool
 }
 
 // NewDataFlowTester create a *DataFlowTester to help developer test their subtasks data flow
@@ -104,6 +107,9 @@ func NewDataFlowTester(t *testing.T, pluginName string, pluginMeta plugin.Plugin
 	cfg.Set(`DB_URL`, cfg.GetString(`E2E_DB_URL`))
 	db, err := runner.NewGormDb(cfg, logruslog.Global)
 	if err != nil {
+		// if here fail with error `acces denied for user` you need to create database by your self as follow command
+		// create databases lake_test;
+		// grant all on lake_test.* to 'merico'@'%';
 		panic(err)
 	}
 	return &DataFlowTester{
@@ -119,7 +125,10 @@ func NewDataFlowTester(t *testing.T, pluginName string, pluginMeta plugin.Plugin
 
 // ImportCsvIntoRawTable imports records from specified csv file into target raw table, note that existing data would be deleted first.
 func (t *DataFlowTester) ImportCsvIntoRawTable(csvRelPath string, rawTableName string) {
-	csvIter := pluginhelper.NewCsvFileIterator(csvRelPath)
+	csvIter, err := pluginhelper.NewCsvFileIterator(csvRelPath)
+	if err != nil {
+		panic(err)
+	}
 	defer csvIter.Close()
 	t.FlushRawTable(rawTableName)
 	// load rows and insert into target table
@@ -134,17 +143,22 @@ func (t *DataFlowTester) ImportCsvIntoRawTable(csvRelPath string, rawTableName s
 	}
 }
 
-// ImportCsvIntoTabler imports records from specified csv file into target tabler, note that existing data would be deleted first.
-func (t *DataFlowTester) ImportCsvIntoTabler(csvRelPath string, dst schema.Tabler) {
-	csvIter := pluginhelper.NewCsvFileIterator(csvRelPath)
+func (t *DataFlowTester) importCsv(csvRelPath string, dst schema.Tabler, nullable bool) {
+	csvIter, _ := pluginhelper.NewCsvFileIterator(csvRelPath)
 	defer csvIter.Close()
 	t.FlushTabler(dst)
 	// load rows and insert into target table
 	for csvIter.HasNext() {
 		toInsertValues := csvIter.Fetch()
 		for i := range toInsertValues {
-			if toInsertValues[i].(string) == `` {
-				toInsertValues[i] = nil
+			if nullable {
+				if toInsertValues[i].(string) == `NULL` {
+					toInsertValues[i] = nil
+				}
+			} else {
+				if toInsertValues[i].(string) == `` {
+					toInsertValues[i] = nil
+				}
 			}
 		}
 		result := t.Db.Model(dst).Create(toInsertValues)
@@ -153,6 +167,16 @@ func (t *DataFlowTester) ImportCsvIntoTabler(csvRelPath string, dst schema.Table
 		}
 		assert.Equal(t.T, int64(1), result.RowsAffected)
 	}
+}
+
+// ImportCsvIntoTabler imports records from specified csv file into target tabler, the empty string will be taken as NULL. note that existing data would be deleted first.
+func (t *DataFlowTester) ImportCsvIntoTabler(csvRelPath string, dst schema.Tabler) {
+	t.importCsv(csvRelPath, dst, false)
+}
+
+// ImportNullableCsvIntoTabler imports records from specified csv file into target tabler, the `NULL` will be taken as NULL. note that existing data would be deleted first.
+func (t *DataFlowTester) ImportNullableCsvIntoTabler(csvRelPath string, dst schema.Tabler) {
+	t.importCsv(csvRelPath, dst, true)
 }
 
 // FlushRawTable migrate table and deletes all records from specified table
@@ -223,6 +247,12 @@ func (t *DataFlowTester) CreateSnapshot(dst schema.Tabler, opts TableOptions) {
 	if err != nil {
 		panic(err)
 	}
+	for i := 0; i < len(pkColumnNames); i++ {
+		group := strings.Split(pkColumnNames[i], ".")
+		if len(group) > 1 {
+			pkColumnNames[i] = group[len(group)-1]
+		}
+	}
 	allFields := append(pkColumnNames, targetFields...)
 	allFields = utils.StringsUniq(allFields)
 	dbCursor, err := t.Dal.Cursor(
@@ -238,7 +268,7 @@ func (t *DataFlowTester) CreateSnapshot(dst schema.Tabler, opts TableOptions) {
 	if err != nil {
 		panic(errors.Default.Wrap(err, fmt.Sprintf("unable to get columns from table %s", dst.TableName())))
 	}
-	csvWriter := pluginhelper.NewCsvFileWriter(opts.CSVRelPath, columns)
+	csvWriter, _ := pluginhelper.NewCsvFileWriter(opts.CSVRelPath, columns)
 	defer csvWriter.Close()
 
 	// define how to scan value
@@ -271,7 +301,11 @@ func (t *DataFlowTester) CreateSnapshot(dst schema.Tabler, opts TableOptions) {
 				if value.Valid {
 					values[i] = value.Time.In(location).Format("2006-01-02T15:04:05.000-07:00")
 				} else {
-					values[i] = ``
+					if opts.Nullable {
+						values[i] = "NULL"
+					} else {
+						values[i] = ""
+					}
 				}
 			case *bool:
 				if *forScanValues[i].(*bool) {
@@ -284,14 +318,22 @@ func (t *DataFlowTester) CreateSnapshot(dst schema.Tabler, opts TableOptions) {
 				if value.Valid {
 					values[i] = value.String
 				} else {
-					values[i] = ``
+					if opts.Nullable {
+						values[i] = "NULL"
+					} else {
+						values[i] = ""
+					}
 				}
 			case *sql.NullInt64:
 				value := *forScanValues[i].(*sql.NullInt64)
 				if value.Valid {
 					values[i] = strconv.FormatInt(value.Int64, 10)
 				} else {
-					values[i] = ``
+					if opts.Nullable {
+						values[i] = "NULL"
+					} else {
+						values[i] = ""
+					}
 				}
 			case *string:
 				values[i] = fmt.Sprint(*forScanValues[i].(*string))
@@ -317,7 +359,7 @@ func (t *DataFlowTester) ExportRawTable(rawTableName string, csvRelPath string) 
 		panic(err)
 	}
 
-	csvWriter := pluginhelper.NewCsvFileWriter(csvRelPath, allFields)
+	csvWriter, _ := pluginhelper.NewCsvFileWriter(csvRelPath, allFields)
 	defer csvWriter.Close()
 
 	for _, rawRow := range *rawRows {
@@ -332,7 +374,10 @@ func (t *DataFlowTester) ExportRawTable(rawTableName string, csvRelPath string) 
 	}
 }
 
-func formatDbValue(value interface{}) string {
+func formatDbValue(value interface{}, nullable bool) string {
+	if nullable && value == nil {
+		return "NULL"
+	}
 	location, _ := time.LoadLocation(`UTC`)
 	switch value := value.(type) {
 	case time.Time:
@@ -425,7 +470,7 @@ func (t *DataFlowTester) VerifyTableWithOptions(dst schema.Tabler, opts TableOpt
 		panic(err)
 	}
 
-	csvIter := pluginhelper.NewCsvFileIterator(opts.CSVRelPath)
+	csvIter, _ := pluginhelper.NewCsvFileIterator(opts.CSVRelPath)
 	defer csvIter.Close()
 
 	var expectedTotal int64
@@ -456,7 +501,7 @@ func (t *DataFlowTester) VerifyTableWithOptions(dst schema.Tabler, opts TableOpt
 		actualTotal++
 		pkValues := make([]string, 0, len(pkColumns))
 		for _, pkc := range pkColumns {
-			pkValues = append(pkValues, formatDbValue(actual[pkc.Name()]))
+			pkValues = append(pkValues, formatDbValue(actual[pkc.Name()], opts.Nullable))
 		}
 		expected, ok := csvMap[strings.Join(pkValues, `-`)]
 		assert.True(t.T, ok, fmt.Sprintf(`%s not found (with params from csv %s)`, dst.TableName(), pkValues))
@@ -464,7 +509,7 @@ func (t *DataFlowTester) VerifyTableWithOptions(dst schema.Tabler, opts TableOpt
 			continue
 		}
 		for _, field := range targetFields {
-			assert.Equal(t.T, expected[field], formatDbValue(actual[field]), fmt.Sprintf(`%s.%s not match (with params from csv %s)`, dst.TableName(), field, pkValues))
+			assert.Equal(t.T, expected[field], formatDbValue(actual[field], opts.Nullable), fmt.Sprintf(`%s.%s not match (with params from csv %s)`, dst.TableName(), field, pkValues))
 		}
 	}
 

@@ -19,9 +19,39 @@ package dal
 
 import (
 	"database/sql"
-	"github.com/apache/incubator-devlake/core/errors"
+	"fmt"
 	"reflect"
+
+	"github.com/apache/incubator-devlake/core/errors"
 )
+
+const (
+	Varchar ColumnType = "varchar(255)"
+	Text    ColumnType = "text"
+	Int     ColumnType = "bigint"
+	Time    ColumnType = "timestamp"
+	Float   ColumnType = "float"
+)
+
+var columnTypes = map[string]ColumnType{
+	Varchar.String(): Varchar,
+	Text.String():    Text,
+	Int.String():     Int,
+	Time.String():    Time,
+	Float.String():   Float,
+}
+
+type ColumnType string
+
+func (c ColumnType) String() string {
+	return string(c)
+}
+
+// ToColumnType converts a string to ColumnType
+func ToColumnType(s string) (ColumnType, bool) {
+	t, ok := columnTypes[s]
+	return t, ok
+}
 
 type Tabler interface {
 	TableName() string
@@ -86,7 +116,7 @@ type Dal interface {
 	// AutoMigrate runs auto migration for given entity
 	AutoMigrate(entity interface{}, clauses ...Clause) errors.Error
 	// AddColumn add column for the table
-	AddColumn(table, columnName, columnType string) errors.Error
+	AddColumn(table, columnName string, columnType ColumnType) errors.Error
 	// DropColumns drop column from the table
 	DropColumns(table string, columnName ...string) errors.Error
 	// Exec executes raw sql query
@@ -105,12 +135,14 @@ type Dal interface {
 	Pluck(column string, dest interface{}, clauses ...Clause) errors.Error
 	// Create insert record to database
 	Create(entity interface{}, clauses ...Clause) errors.Error
+	// CreateWithMap insert record to database, the record is organized as map
+	CreateWithMap(entity interface{}, record map[string]interface{}) errors.Error
 	// Update updates record
 	Update(entity interface{}, clauses ...Clause) errors.Error
 	// UpdateColumn allows you to update multiple records
-	UpdateColumn(entity interface{}, columnName string, value interface{}, clauses ...Clause) errors.Error
+	UpdateColumn(entityOrTable interface{}, columnName string, value interface{}, clauses ...Clause) errors.Error
 	// UpdateColumns allows you to update multiple columns of multiple records
-	UpdateColumns(entity interface{}, set []DalSet, clauses ...Clause) errors.Error
+	UpdateColumns(entityOrTable interface{}, set []DalSet, clauses ...Clause) errors.Error
 	// UpdateAllColumn updated all Columns of entity
 	UpdateAllColumn(entity interface{}, clauses ...Clause) errors.Error
 	// CreateOrUpdate tries to create the record, or fallback to update all if failed
@@ -208,7 +240,8 @@ func GetPrimarykeyColumnNames(d Dal, dst Tabler) (names []string, err errors.Err
 		return
 	}
 	for _, pkColumn := range pkColumns {
-		names = append(names, pkColumn.Name())
+		// in case the column name is a reserved identifier
+		names = append(names, fmt.Sprintf("%s.%s", dst.TableName(), pkColumn.Name()))
 	}
 	return
 }

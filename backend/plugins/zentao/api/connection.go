@@ -19,63 +19,57 @@ package api
 
 import (
 	"context"
+	"github.com/apache/incubator-devlake/server/api/shared"
+	"net/http"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/zentao/models"
-	"github.com/mitchellh/mapstructure"
-	"net/http"
 )
 
-func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, errors.Error) {
-	// process input
-	var params models.TestConnectionRequest
-	err := mapstructure.Decode(input.Body, &params)
-	if err != nil {
-		return nil, errors.BadInput.Wrap(err, "could not decode request parameters")
-	}
-	err = vld.Struct(params)
-	if err != nil {
-		return nil, errors.BadInput.Wrap(err, "could not validate request parameters")
-	}
-
-	authApiClient, err := helper.NewApiClient(context.TODO(), params.Endpoint, nil, 0, params.Proxy, basicRes)
-	if err != nil {
-		return nil, errors.Default.WrapRaw(err)
-	}
-
-	// request for access token
-	tokenReqBody := &models.ApiAccessTokenRequest{
-		Account:  params.Username,
-		Password: params.Password,
-	}
-	tokenRes, err := authApiClient.Post("/tokens", nil, tokenReqBody, nil)
-	if err != nil {
-		return nil, errors.Default.WrapRaw(err)
-	}
-	tokenResBody := &models.ApiAccessTokenResponse{}
-	err = helper.UnmarshalResponse(tokenRes, tokenResBody)
-	if err != nil {
-		return nil, errors.Default.WrapRaw(err)
-	}
-	if tokenResBody.Token == "" {
-		return nil, errors.Default.New("failed to request access token")
-	}
-
-	// output
-	return nil, nil
+type ZentaoTestConnResponse struct {
+	shared.ApiBody
+	Connection *models.ZentaoConn
 }
 
-/*
-POST /plugins/Zentao/connections
-
-	{
-		"name": "Zentao data connection name",
-		"endpoint": "Zentao api endpoint, i.e. https://example.com",
-		"username": "username, usually should be email address",
-		"password": "Zentao api access token"
+// @Summary test zentao connection
+// @Description Test zentao Connection
+// @Tags plugins/zentao
+// @Param body body models.ZentaoConn true "json body"
+// @Success 200  {object} ZentaoTestConnResponse "Success"
+// @Failure 400  {string} errcode.Error "Bad Request"
+// @Failure 500  {string} errcode.Error "Internal Error"
+// @Router /plugins/zentao/test [POST]
+func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, errors.Error) {
+	// process input
+	var connection models.ZentaoConn
+	err := helper.Decode(input.Body, &connection, vld)
+	if err != nil {
+		return nil, err
 	}
-*/
+
+	// try to create apiClient
+	_, err = helper.NewApiClientFromConnection(context.TODO(), basicRes, &connection)
+	if err != nil {
+		return nil, err
+	}
+	body := ZentaoTestConnResponse{}
+	body.Success = true
+	body.Message = "success"
+	body.Connection = &connection
+	// output
+	return &plugin.ApiResourceOutput{Body: body, Status: 200}, nil
+}
+
+// @Summary create zentao connection
+// @Description Create zentao connection
+// @Tags plugins/zentao
+// @Param body body models.ZentaoConnection true "json body"
+// @Success 200  {object} models.ZentaoConnection
+// @Failure 400  {string} errcode.Error "Bad Request"
+// @Failure 500  {string} errcode.Error "Internal Error"
+// @Router /plugins/zentao/connections [POST]
 func PostConnections(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, errors.Error) {
 	// update from request and save to database
 	connection := &models.ZentaoConnection{}
@@ -86,16 +80,14 @@ func PostConnections(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput,
 	return &plugin.ApiResourceOutput{Body: connection, Status: http.StatusOK}, nil
 }
 
-/*
-PATCH /plugins/Zentao/connections/:connectionId
-
-	{
-		"name": "Zentao data connection name",
-		"endpoint": "Zentao api endpoint, i.e. https://example.com",
-		"username": "username, usually should be email address",
-		"password": "Zentao api access token"
-	}
-*/
+// @Summary patch zentao connection
+// @Description Patch zentao connection
+// @Tags plugins/zentao
+// @Param body body models.ZentaoConnection true "json body"
+// @Success 200  {object} models.ZentaoConnection
+// @Failure 400  {string} errcode.Error "Bad Request"
+// @Failure 500  {string} errcode.Error "Internal Error"
+// @Router /plugins/zentao/connections/{connectionId} [PATCH]
 func PatchConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, errors.Error) {
 	connection := &models.ZentaoConnection{}
 	err := connectionHelper.Patch(connection, input)
@@ -105,9 +97,13 @@ func PatchConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput,
 	return &plugin.ApiResourceOutput{Body: connection}, nil
 }
 
-/*
-DELETE /plugins/Zentao/connections/:connectionId
-*/
+// @Summary delete a zentao connection
+// @Description Delete a zentao connection
+// @Tags plugins/zentao
+// @Success 200  {object} models.ZentaoConnection
+// @Failure 400  {string} errcode.Error "Bad Request"
+// @Failure 500  {string} errcode.Error "Internal Error"
+// @Router /plugins/zentao/connections/{connectionId} [DELETE]
 func DeleteConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, errors.Error) {
 	connection := &models.ZentaoConnection{}
 	err := connectionHelper.First(connection, input.Params)
@@ -118,9 +114,13 @@ func DeleteConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput
 	return &plugin.ApiResourceOutput{Body: connection}, err
 }
 
-/*
-GET /plugins/Zentao/connections
-*/
+// @Summary get all zentao connections
+// @Description Get all zentao connections
+// @Tags plugins/zentao
+// @Success 200  {object} []models.ZentaoConnection
+// @Failure 400  {string} errcode.Error "Bad Request"
+// @Failure 500  {string} errcode.Error "Internal Error"
+// @Router /plugins/zentao/connections [GET]
 func ListConnections(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, errors.Error) {
 	var connections []models.ZentaoConnection
 	err := connectionHelper.List(&connections)
@@ -130,16 +130,13 @@ func ListConnections(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput,
 	return &plugin.ApiResourceOutput{Body: connections, Status: http.StatusOK}, nil
 }
 
-/*
-GET /plugins/Zentao/connections/:connectionId
-
-	{
-		"name": "Zentao data connection name",
-		"endpoint": "Zentao api endpoint, i.e. https://merico.atlassian.net/rest",
-		"username": "username, usually should be email address",
-		"password": "Zentao api access token"
-	}
-*/
+// @Summary get zentao connection detail
+// @Description Get zentao connection detail
+// @Tags plugins/zentao
+// @Success 200  {object} models.ZentaoConnection
+// @Failure 400  {string} errcode.Error "Bad Request"
+// @Failure 500  {string} errcode.Error "Internal Error"
+// @Router /plugins/zentao/connections/{connectionId} [GET]
 func GetConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, errors.Error) {
 	connection := &models.ZentaoConnection{}
 	err := connectionHelper.First(connection, input.Params)

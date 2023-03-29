@@ -20,68 +20,119 @@ package tasks
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"reflect"
+	"time"
+
+	"github.com/apache/incubator-devlake/core/dal"
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
-	"net/http"
-	"net/url"
+	"github.com/apache/incubator-devlake/plugins/github/models"
 )
 
 const RAW_RUN_TABLE = "github_api_runs"
+
+// Although the API accepts a maximum of 100 entries per page, sometimes
+// the response body is too large which would lead to request failures
+// https://github.com/apache/incubator-devlake/issues/3199
+const PAGE_SIZE = 30
+
+type GithubRawRunsResult struct {
+	TotalCount         int64             `json:"total_count"`
+	GithubWorkflowRuns []json.RawMessage `json:"workflow_runs"`
+}
+
+type SimpleGithubApiJob struct {
+	ID        int64
+	CreatedAt helper.Iso8601Time `json:"created_at"`
+}
 
 var CollectRunsMeta = plugin.SubTaskMeta{
 	Name:             "collectRuns",
 	EntryPoint:       CollectRuns,
 	EnabledByDefault: true,
-	Description:      "Collect Runs data from Github action api",
+	Description:      "Collect Runs data from Github action api, supports both timeFilter and diffSync.",
 	DomainTypes:      []string{plugin.DOMAIN_TYPE_CICD},
 }
 
 func CollectRuns(taskCtx plugin.SubTaskContext) errors.Error {
 	data := taskCtx.GetData().(*GithubTaskData)
-	collectorWithState, err := helper.NewApiCollectorWithState(helper.RawDataSubTaskArgs{
-		Ctx: taskCtx,
-		Params: GithubApiParams{
-			ConnectionId: data.Options.ConnectionId,
-			Name:         data.Options.Name,
+	db := taskCtx.GetDal()
+	collector, err := helper.NewStatefulApiCollectorForFinalizableEntity(helper.FinalizableApiCollectorArgs{
+		RawDataSubTaskArgs: helper.RawDataSubTaskArgs{
+			Ctx: taskCtx,
+			Params: GithubApiParams{
+				ConnectionId: data.Options.ConnectionId,
+				Name:         data.Options.Name,
+			},
+			Table: RAW_RUN_TABLE,
 		},
-		Table: RAW_RUN_TABLE,
-	}, data.CreatedDateAfter)
-	if err != nil {
-		return err
-	}
-
-	//incremental := collectorWithState.IsIncremental()
-	err = collectorWithState.InitCollector(helper.ApiCollectorArgs{
 		ApiClient: data.ApiClient,
-		PageSize:  30,
-		//Incremental: incremental,
-		UrlTemplate: "repos/{{ .Params.Name }}/actions/runs",
-		Query: func(reqData *helper.RequestData) (url.Values, errors.Error) {
-			query := url.Values{}
-			// if data.CreatedDateAfter != nil, we set since once
-			// There is a bug for github rest api, so temporarily commented the following code
-			//if data.CreatedDateAfter != nil {
-			//	startDate := data.CreatedDateAfter.Format("2006-01-02")
-			//	query.Set("created", fmt.Sprintf("%s..*", startDate))
-			//}
-			//// if incremental == true, we overwrite it
-			//if incremental {
-			//	startDate := collectorWithState.LatestState.LatestSuccessStart.Format("2006-01-02")
-			//	query.Set("created", fmt.Sprintf("%s..*", startDate))
-			//}
-			query.Set("page", fmt.Sprintf("%v", reqData.Pager.Page))
-			query.Set("per_page", fmt.Sprintf("%v", reqData.Pager.Size))
-			return query, nil
+		TimeAfter: data.TimeAfter,
+		CollectNewRecordsByList: helper.FinalizableApiCollectorListArgs{
+			PageSize:    PAGE_SIZE,
+			Concurrency: 10,
+			FinalizableApiCollectorCommonArgs: helper.FinalizableApiCollectorCommonArgs{
+				UrlTemplate: "repos/{{ .Params.Name }}/actions/runs",
+				Query: func(reqData *helper.RequestData, createdAfter *time.Time) (url.Values, errors.Error) {
+					query := url.Values{}
+					query.Set("page", fmt.Sprintf("%v", reqData.Pager.Page))
+					query.Set("per_page", fmt.Sprintf("%v", reqData.Pager.Size))
+					return query, nil
+				},
+				ResponseParser: func(res *http.Response) ([]json.RawMessage, errors.Error) {
+					body := &GithubRawRunsResult{}
+					err := helper.UnmarshalResponse(res, body)
+					if err != nil {
+						return nil, err
+					}
+					if len(body.GithubWorkflowRuns) == 0 {
+						return nil, nil
+					}
+					return body.GithubWorkflowRuns, nil
+				},
+			},
+			GetCreated: func(item json.RawMessage) (time.Time, errors.Error) {
+				pj := &SimpleGithubApiJob{}
+				err := json.Unmarshal(item, pj)
+				if err != nil {
+					return time.Time{}, errors.BadInput.Wrap(err, "failed to unmarshal github run")
+				}
+				return pj.CreatedAt.ToTime(), nil
+			},
 		},
-		GetTotalPages: GetTotalPagesFromResponse,
-		ResponseParser: func(res *http.Response) ([]json.RawMessage, errors.Error) {
-			body := &GithubRawRunsResult{}
-			err := helper.UnmarshalResponse(res, body)
-			if err != nil {
-				return nil, err
-			}
-			return body.GithubWorkflowRuns, nil
+		CollectUnfinishedDetails: helper.FinalizableApiCollectorDetailArgs{
+			BuildInputIterator: func() (helper.Iterator, errors.Error) {
+				// load unfinished runs from the database
+				cursor, err := db.Cursor(
+					dal.Select("id"),
+					dal.From(&models.GithubRun{}),
+					dal.Where(
+						"repo_id = ? AND connection_id = ? AND status IN ('ACTION_REQUIRED', 'STALE', 'IN_PROGRESS', 'QUEUED', 'REQUESTED', 'WAITING', 'PENDING')",
+						data.Options.GithubId, data.Options.ConnectionId,
+					),
+				)
+				if err != nil {
+					return nil, err
+				}
+				return helper.NewDalCursorIterator(db, cursor, reflect.TypeOf(SimpleGithubApiJob{}))
+			},
+
+			FinalizableApiCollectorCommonArgs: helper.FinalizableApiCollectorCommonArgs{
+				UrlTemplate: "repos/{{ .Params.Name }}/actions/runs/{{ .Input.ID }}",
+				ResponseParser: func(res *http.Response) ([]json.RawMessage, errors.Error) {
+					body, err := io.ReadAll(res.Body)
+					if err != nil {
+						return nil, errors.Convert(err)
+					}
+					res.Body.Close()
+					return []json.RawMessage{body}, nil
+				},
+				AfterResponse: ignoreHTTPStatus404,
+			},
 		},
 	})
 
@@ -89,10 +140,6 @@ func CollectRuns(taskCtx plugin.SubTaskContext) errors.Error {
 		return err
 	}
 
-	return collectorWithState.Execute()
-}
+	return collector.Execute()
 
-type GithubRawRunsResult struct {
-	TotalCount         int64             `json:"total_count"`
-	GithubWorkflowRuns []json.RawMessage `json:"workflow_runs"`
 }

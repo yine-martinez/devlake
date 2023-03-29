@@ -18,14 +18,14 @@ limitations under the License.
 package tasks
 
 import (
-	"fmt"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/zentao/models"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 func NewZentaoApiClient(taskCtx plugin.TaskContext, connection *models.ZentaoConnection) (*api.ApiAsyncClient, error) {
@@ -45,21 +45,10 @@ func NewZentaoApiClient(taskCtx plugin.TaskContext, connection *models.ZentaoCon
 	}
 	tokenResBody := &models.ApiAccessTokenResponse{}
 	err = api.UnmarshalResponse(tokenRes, tokenResBody)
+	apiClient, err := api.NewApiClientFromConnection(taskCtx.GetContext(), taskCtx, connection)
 	if err != nil {
 		return nil, err
 	}
-	if tokenResBody.Token == "" {
-		return nil, errors.Default.New("failed to request access token")
-	}
-	// real request apiClient
-	apiClient, err := api.NewApiClient(taskCtx.GetContext(), connection.Endpoint, nil, 0, connection.Proxy, taskCtx)
-	if err != nil {
-		return nil, err
-	}
-	// set token
-	apiClient.SetHeaders(map[string]string{
-		"Token": fmt.Sprintf("%v", tokenResBody.Token),
-	})
 	// create rate limit calculator
 	rateLimiter := &api.ApiRateLimitCalculator{
 		UserRateLimitPerHour: connection.RateLimitPerHour,

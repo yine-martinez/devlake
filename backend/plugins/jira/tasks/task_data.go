@@ -20,10 +20,11 @@ package tasks
 import (
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/jira/models"
-	"time"
 )
 
 type StatusMapping struct {
@@ -40,51 +41,62 @@ type TypeMapping struct {
 type TypeMappings map[string]TypeMapping
 
 type JiraTransformationRule struct {
+	ConnectionId               uint64       `mapstructure:"connectionId" json:"connectionId"`
 	Name                       string       `gorm:"type:varchar(255)" validate:"required"`
 	EpicKeyField               string       `json:"epicKeyField"`
 	StoryPointField            string       `json:"storyPointField"`
 	RemotelinkCommitShaPattern string       `json:"remotelinkCommitShaPattern"`
+	RemotelinkRepoPattern      []string     `json:"remotelinkRepoPattern"`
 	TypeMappings               TypeMappings `json:"typeMappings"`
 }
 
-func (r *JiraTransformationRule) ToDb() (rule *models.JiraTransformationRule, error2 errors.Error) {
+func (r *JiraTransformationRule) ToDb() (*models.JiraTransformationRule, errors.Error) {
 	blob, err := json.Marshal(r.TypeMappings)
 	if err != nil {
 		return nil, errors.Default.Wrap(err, "error marshaling TypeMappings")
 	}
-	return &models.JiraTransformationRule{
+	remotelinkRepoPattern, err := json.Marshal(r.RemotelinkRepoPattern)
+	if err != nil {
+		return nil, errors.Default.Wrap(err, "error marshaling RemotelinkRepoPattern")
+	}
+	rule := &models.JiraTransformationRule{
+		ConnectionId:               r.ConnectionId,
 		Name:                       r.Name,
 		EpicKeyField:               r.EpicKeyField,
 		StoryPointField:            r.StoryPointField,
 		RemotelinkCommitShaPattern: r.RemotelinkCommitShaPattern,
+		RemotelinkRepoPattern:      remotelinkRepoPattern,
 		TypeMappings:               blob,
-	}, nil
-}
-func (r *JiraTransformationRule) FromDb(rule *models.JiraTransformationRule) (*JiraTransformationRule, errors.Error) {
-	mappings := make(map[string]TypeMapping)
-	err := json.Unmarshal(rule.TypeMappings, &mappings)
-	if err != nil {
-		return nil, errors.Default.Wrap(err, "error marshaling TypeMappings")
 	}
-	r.Name = rule.Name
-	r.EpicKeyField = rule.EpicKeyField
-	r.StoryPointField = rule.StoryPointField
-	r.RemotelinkCommitShaPattern = rule.RemotelinkCommitShaPattern
-	r.TypeMappings = mappings
-	return r, nil
+	if err1 := rule.VerifyRegexp(); err1 != nil {
+		return nil, err1
+	}
+	return rule, nil
 }
 
 func MakeTransformationRules(rule models.JiraTransformationRule) (*JiraTransformationRule, errors.Error) {
 	var typeMapping TypeMappings
-	err := json.Unmarshal(rule.TypeMappings, &typeMapping)
-	if err != nil {
-		return nil, errors.Default.Wrap(err, "unable to unmarshal the typeMapping")
+	var err error
+	if len(rule.TypeMappings) > 0 {
+		err = json.Unmarshal(rule.TypeMappings, &typeMapping)
+		if err != nil {
+			return nil, errors.Default.Wrap(err, "unable to unmarshal the typeMapping")
+		}
+	}
+	var remotelinkRepoPattern []string
+	if len(rule.RemotelinkRepoPattern) > 0 {
+		err = json.Unmarshal(rule.RemotelinkRepoPattern, &remotelinkRepoPattern)
+		if err != nil {
+			return nil, errors.Default.Wrap(err, "error unMarshaling RemotelinkRepoPattern")
+		}
 	}
 	result := &JiraTransformationRule{
+		ConnectionId:               rule.ConnectionId,
 		Name:                       rule.Name,
 		EpicKeyField:               rule.EpicKeyField,
 		StoryPointField:            rule.StoryPointField,
 		RemotelinkCommitShaPattern: rule.RemotelinkCommitShaPattern,
+		RemotelinkRepoPattern:      remotelinkRepoPattern,
 		TypeMappings:               typeMapping,
 	}
 	return result, nil
@@ -93,17 +105,17 @@ func MakeTransformationRules(rule models.JiraTransformationRule) (*JiraTransform
 type JiraOptions struct {
 	ConnectionId         uint64 `json:"connectionId"`
 	BoardId              uint64 `json:"boardId"`
-	CreatedDateAfter     string
+	TimeAfter            string
 	TransformationRules  *JiraTransformationRule `json:"transformationRules"`
 	ScopeId              string
 	TransformationRuleId uint64
 }
 
 type JiraTaskData struct {
-	Options          *JiraOptions
-	ApiClient        *api.ApiAsyncClient
-	CreatedDateAfter *time.Time
-	JiraServerInfo   models.JiraServerInfo
+	Options        *JiraOptions
+	ApiClient      *api.ApiAsyncClient
+	TimeAfter      *time.Time
+	JiraServerInfo models.JiraServerInfo
 }
 
 type JiraApiParams struct {

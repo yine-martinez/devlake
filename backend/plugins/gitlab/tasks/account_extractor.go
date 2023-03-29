@@ -19,6 +19,7 @@ package tasks
 
 import (
 	"encoding/json"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
@@ -57,6 +58,7 @@ func ExtractAccounts(taskCtx plugin.SubTaskContext) errors.Error {
 				WebUrl:          userRes.WebUrl,
 			}
 			results = append(results, GitlabAccount)
+
 			return results, nil
 		},
 	})
@@ -65,5 +67,10 @@ func ExtractAccounts(taskCtx plugin.SubTaskContext) errors.Error {
 		return err
 	}
 
-	return extractor.Execute()
+	err = extractor.Execute()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

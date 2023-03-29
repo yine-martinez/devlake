@@ -77,7 +77,7 @@ export const useBPUpgrade = ({ id, onResetError }: UseBPUpgradeProps) => {
     }
 
     if (plugin === 'jira') {
-      const res = await API.getJIRA(prefix, options.boardId);
+      const res = await API.getJira(prefix, options.boardId);
       return {
         connectionId,
         boardId: res.id,
@@ -94,7 +94,7 @@ export const useBPUpgrade = ({ id, onResetError }: UseBPUpgradeProps) => {
 
     if (scope.transformation) {
       // create transfromation template
-      transformationRule = await API.createTransformation(plugin, {
+      transformationRule = await API.createTransformation(plugin, connectionId, {
         ...scope.transformation,
         name: `upgrade-${plugin}-${connectionId}-${new Date().getTime()}`,
       });

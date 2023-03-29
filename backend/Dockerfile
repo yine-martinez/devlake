@@ -111,12 +111,12 @@ RUN cd /usr/local/deps/target/lib && \
     done
 
 
-FROM debian:bullseye-slim as base
+FROM python:3.11.2-slim-bullseye as base
 
 ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && \
-    apt-get install -y python3-dev python3-pip tar curl libssh2-1 zlib1g && \
+    apt-get install -y python3-dev python3-pip tar curl libssh2-1 zlib1g libffi-dev default-libmysqlclient-dev && \
     apt-get clean && \
     rm -fr /usr/share/doc/* \
            /usr/share/info/* \
@@ -134,11 +134,17 @@ EXPOSE 8080
 
 WORKDIR /app
 # Setup Python
-COPY python/requirements.txt /app/requirements.txt
+COPY python/ /app/python/
 RUN python3 -m pip install --no-cache --upgrade pip setuptools && \
     python3 -m pip install --no-cache dbt-mysql dbt-postgres && \
-    python3 -m pip install --no-cache -r requirements.txt && \
+    python3 -m pip install --no-cache -r python/requirements.txt && \
     rm -fr /usr/share/python-wheels/*
+# Setup Python Poetry package manager
+RUN curl -sSL https://install.python-poetry.org | python3 -
+RUN ln -sf /root/.local/bin/poetry /usr/local/bin
+# Build Python plugins
+RUN find /app/python/ -name "*.sh" | xargs -I{} chmod +x {} && \
+    /app/python/build.sh
 
 
 FROM base as devlake-base
@@ -155,10 +161,11 @@ COPY --from=build /app/resources/tap /app/resources/tap
 
 ENV PATH="/app/bin:${PATH}"
 
+#add tini, prevent zombie process
 RUN apt-get update && \
-    apt-get install -y tini #add tini, prevent zombie process \
+    apt-get install -y tini
 
-ENTRYPOINT ["/sbin/tini", "--"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
 
 CMD ["lake"]
 

@@ -19,13 +19,14 @@ package tasks
 
 import (
 	"encoding/json"
+	"net/http"
+	"reflect"
+
 	"github.com/apache/incubator-devlake/core/dal"
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/jira/tasks/apiv2models"
-	"net/http"
-	"reflect"
 )
 
 const RAW_REMOTELINK_TABLE = "jira_api_remotelinks"
@@ -36,7 +37,7 @@ var CollectRemotelinksMeta = plugin.SubTaskMeta{
 	Name:             "collectRemotelinks",
 	EntryPoint:       CollectRemotelinks,
 	EnabledByDefault: true,
-	Description:      "collect Jira remote links",
+	Description:      "collect Jira remote links, supports both timeFilter and diffSync.",
 	DomainTypes:      []string{plugin.DOMAIN_TYPE_TICKET},
 }
 
@@ -46,39 +47,32 @@ func CollectRemotelinks(taskCtx plugin.SubTaskContext) errors.Error {
 	logger := taskCtx.GetLogger()
 	logger.Info("collect remotelink")
 
-	collectorWithState, err := api.NewApiCollectorWithState(api.RawDataSubTaskArgs{
+	collectorWithState, err := api.NewStatefulApiCollector(api.RawDataSubTaskArgs{
 		Ctx: taskCtx,
 		Params: JiraApiParams{
 			ConnectionId: data.Options.ConnectionId,
 			BoardId:      data.Options.BoardId,
 		},
 		Table: RAW_REMOTELINK_TABLE,
-	}, data.CreatedDateAfter)
+	}, data.TimeAfter)
 	if err != nil {
 		return err
 	}
 
 	clauses := []dal.Clause{
-		dal.Select("i.issue_id, i.updated AS update_time"),
+		dal.Select("i.issue_id AS issue_id, i.updated AS update_time"),
 		dal.From("_tool_jira_board_issues bi"),
 		dal.Join("LEFT JOIN _tool_jira_issues i ON (bi.connection_id = i.connection_id AND bi.issue_id = i.issue_id)"),
-		dal.Join("LEFT JOIN _tool_jira_remotelinks rl ON (rl.connection_id = i.connection_id AND rl.issue_id = i.issue_id)"),
-		dal.Where("i.updated > i.created AND bi.connection_id = ?  AND bi.board_id = ?  ", data.Options.ConnectionId, data.Options.BoardId),
-		dal.Groupby("i.issue_id, i.updated"),
+		dal.Where("bi.connection_id=? and bi.board_id = ?", data.Options.ConnectionId, data.Options.BoardId),
 	}
 	incremental := collectorWithState.IsIncremental()
-	if incremental {
-		clauses = append(clauses, dal.Having("i.updated > ? AND (i.updated > max(rl.issue_updated) OR max(rl.issue_updated) IS NULL)", collectorWithState.LatestState.LatestSuccessStart))
+	if incremental && collectorWithState.LatestState.LatestSuccessStart != nil {
+		clauses = append(
+			clauses,
+			dal.Where("i.updated > ?", collectorWithState.LatestState.LatestSuccessStart),
+		)
 	}
-	/*
-		i.updated > max(rl.issue_updated) was deleted because for non-incremental collection, max(rl.issue_updated) is always null.
-			so i.updated > max(rl.issue_updated) is constantly false
-		also, for the first collection, max(rl.issue_updated) is always null as there is no data in _tool_jira_remotelinks.
-		In conclusion, we don't need the following clause
-	*/
-	//else {
-	// clauses = append(clauses, dal.Having("i.updated > max(rl.issue_updated) OR max(rl.issue_updated) IS NULL "))
-	//}
+
 	cursor, err := db.Cursor(clauses...)
 	if err != nil {
 		logger.Error(err, "collect remotelink error")

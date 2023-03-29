@@ -19,15 +19,16 @@ package tasks
 
 import (
 	"encoding/json"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/apache/incubator-devlake/core/dal"
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/jira/models"
 	"github.com/apache/incubator-devlake/plugins/jira/tasks/apiv2models"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var _ plugin.SubTaskEntryPoint = ExtractIssues
@@ -74,7 +75,7 @@ func ExtractIssues(taskCtx plugin.SubTaskContext) errors.Error {
 			Table: RAW_ISSUE_TABLE,
 		},
 		Extract: func(row *api.RawData) ([]interface{}, errors.Error) {
-			return extractIssues(data, mappings, false, row)
+			return extractIssues(data, mappings, row)
 		},
 	})
 	if err != nil {
@@ -83,7 +84,7 @@ func ExtractIssues(taskCtx plugin.SubTaskContext) errors.Error {
 	return extractor.Execute()
 }
 
-func extractIssues(data *JiraTaskData, mappings *typeMappings, ignoreBoard bool, row *api.RawData) ([]interface{}, errors.Error) {
+func extractIssues(data *JiraTaskData, mappings *typeMappings, row *api.RawData) ([]interface{}, errors.Error) {
 	var apiIssue apiv2models.Issue
 	err := errors.Convert(json.Unmarshal(row.Data, &apiIssue))
 	if err != nil {
@@ -121,7 +122,7 @@ func extractIssues(data *JiraTaskData, mappings *typeMappings, ignoreBoard bool,
 		}
 
 	}
-	issue.StdStoryPoint = int64(issue.StoryPoint)
+
 	// code in next line will set issue.Type to issueType.Name
 	issue.Type = mappings.typeIdMappings[issue.Type]
 	issue.StdType = mappings.stdTypeMappings[issue.Type]
@@ -155,13 +156,11 @@ func extractIssues(data *JiraTaskData, mappings *typeMappings, ignoreBoard bool,
 			results = append(results, user)
 		}
 	}
-	if !ignoreBoard {
-		results = append(results, &models.JiraBoardIssue{
-			ConnectionId: data.Options.ConnectionId,
-			BoardId:      data.Options.BoardId,
-			IssueId:      issue.IssueId,
-		})
-	}
+	results = append(results, &models.JiraBoardIssue{
+		ConnectionId: data.Options.ConnectionId,
+		BoardId:      data.Options.BoardId,
+		IssueId:      issue.IssueId,
+	})
 	labels := apiIssue.Fields.Labels
 	for _, v := range labels {
 		issueLabel := &models.JiraIssueLabel{

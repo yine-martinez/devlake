@@ -20,6 +20,7 @@ import type { PluginConfigType } from './types';
 import { AEConfig } from './register/ae';
 import { AzureConfig } from './register/azure';
 import { BitBucketConfig } from './register/bitbucket';
+import { CustomizeConfig } from './register/customize';
 import { DBTConfig } from './register/dbt';
 import { DORAConfig } from './register/dora';
 import { FeiShuConfig } from './register/feishu';
@@ -29,17 +30,21 @@ import { GitHubConfig } from './register/github';
 import { GitHubGraphqlConfig } from './register/github_graphql';
 import { GitLabConfig } from './register/gitlab';
 import { JenkinsConfig } from './register/jenkins';
-import { JIRAConfig } from './register/jira';
+import { JiraConfig } from './register/jira';
 import { RefDiffConfig } from './register/refdiff';
+import { SonarQubeConfig } from './register/sonarqube';
 import { StarRocksConfig } from './register/starrocks';
 import { TAPDConfig } from './register/tapd';
 import { WebhookConfig } from './register/webook';
 import { ZenTaoConfig } from './register/zentao';
 import { GoogleConfig } from '@/plugins/register/google';
+import { TeambitionConfig } from './register/teambition';
 
 export const PluginConfig: PluginConfigType[] = [
   AEConfig,
   AzureConfig,
+  BitBucketConfig,
+  CustomizeConfig,
   DBTConfig,
   DORAConfig,
   FeiShuConfig,
@@ -49,12 +54,13 @@ export const PluginConfig: PluginConfigType[] = [
   GitHubGraphqlConfig,
   GitLabConfig,
   JenkinsConfig,
-  JIRAConfig,
+  JiraConfig,
   RefDiffConfig,
+  SonarQubeConfig,
   StarRocksConfig,
-  BitBucketConfig,
   TAPDConfig,
+  TeambitionConfig,
   ZenTaoConfig,
   WebhookConfig,
   GoogleConfig,
-];
+].sort((a, b) => a.sort - b.sort);

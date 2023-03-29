@@ -22,32 +22,19 @@ export enum PluginType {
   Pipeline = 'pipeline',
 }
 
-export type PluginConfigConnectionType = {
-  type: PluginType.Connection;
+export type PluginConfigType = {
+  type: PluginType;
   plugin: string;
   name: string;
   icon: string;
+  sort: number;
   isBeta?: boolean;
   connection: {
+    docLink: string;
     initialValues?: Record<string, any>;
-    fields: Array<{
-      key: string;
-      type: 'text' | 'password' | 'switch' | 'rateLimit' | 'githubToken' | 'gitlabToken';
-      label: string;
-      required?: boolean;
-      placeholder?: string;
-      tooltip?: string;
-    }>;
+    fields: any[];
   };
   entities: string[];
+  transformationType?: 'none' | 'for-connection' | 'for-scope';
   transformation: any;
 };
-
-export type PluginConfigAnotherType = {
-  type: PluginType.Incoming_Connection | PluginType.Pipeline;
-  plugin: string;
-  name: string;
-  icon: string;
-};
-
-export type PluginConfigType = PluginConfigConnectionType | PluginConfigAnotherType;

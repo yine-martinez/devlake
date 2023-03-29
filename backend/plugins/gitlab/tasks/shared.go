@@ -20,14 +20,15 @@ package tasks
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/apache/incubator-devlake/core/dal"
-	"github.com/apache/incubator-devlake/core/errors"
 	"io"
 	"net/http"
 	"net/url"
 	"reflect"
 	"strconv"
 	"time"
+
+	"github.com/apache/incubator-devlake/core/dal"
+	"github.com/apache/incubator-devlake/core/errors"
 
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
@@ -75,9 +76,29 @@ func GetRawMessageFromResponse(res *http.Response) ([]json.RawMessage, errors.Er
 	return rawMessages, nil
 }
 
-func GetRawMessageCreatedAtAfter(createDateAfter *time.Time) func(res *http.Response) ([]json.RawMessage, errors.Error) {
+func GetOneRawMessageFromResponse(res *http.Response) ([]json.RawMessage, errors.Error) {
+	rawMessage := json.RawMessage{}
+
+	if res == nil {
+		return nil, errors.Default.New("res is nil")
+	}
+	defer res.Body.Close()
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, errors.Default.Wrap(err, fmt.Sprintf("error reading response from %s", res.Request.URL.String()))
+	}
+
+	err = errors.Convert(json.Unmarshal(resBody, &rawMessage))
+	if err != nil {
+		return nil, errors.Default.Wrap(err, fmt.Sprintf("error decoding response from %s. raw response was: %s", res.Request.URL.String(), string(resBody)))
+	}
+
+	return []json.RawMessage{rawMessage}, nil
+}
+
+func GetRawMessageUpdatedAtAfter(timeAfter *time.Time) func(res *http.Response) ([]json.RawMessage, errors.Error) {
 	type ApiModel struct {
-		CreatedAt *helper.Iso8601Time `json:"created_at"`
+		UpdatedAt *helper.Iso8601Time `json:"updated_at"`
 	}
 
 	return func(res *http.Response) ([]json.RawMessage, errors.Error) {
@@ -93,7 +114,7 @@ func GetRawMessageCreatedAtAfter(createDateAfter *time.Time) func(res *http.Resp
 			if err != nil {
 				return nil, err
 			}
-			if createDateAfter == nil || createDateAfter.Before(apiModel.CreatedAt.ToTime()) {
+			if timeAfter == nil || timeAfter.Before(apiModel.UpdatedAt.ToTime()) {
 				// only finish when all items are created before `createDateAfter`
 				// because gitlab's order may not strict enough
 				isFinish = false
@@ -140,8 +161,8 @@ func GetMergeRequestsIterator(taskCtx plugin.SubTaskContext, collectorWithState 
 			data.Options.ProjectId, data.Options.ConnectionId,
 		),
 	}
-	if collectorWithState.CreatedDateAfter != nil {
-		clauses = append(clauses, dal.Where("gitlab_created_at > ?", *collectorWithState.CreatedDateAfter))
+	if collectorWithState.LatestState.LatestSuccessStart != nil {
+		clauses = append(clauses, dal.Where("gitlab_updated_at > ?", *collectorWithState.LatestState.LatestSuccessStart))
 	}
 	// construct the input iterator
 	cursor, err := db.Cursor(clauses...)

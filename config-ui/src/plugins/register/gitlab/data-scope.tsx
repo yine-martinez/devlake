@@ -16,42 +16,44 @@
  *
  */
 
-import React from 'react';
+import { useMemo } from 'react';
+
+import { DataScopeMillerColumns, DataScopeSearch } from '@/plugins';
 
 import type { ScopeItemType } from './types';
-
-import { MillerColumns, ProjectSelector } from './components';
+import * as S from './styled';
 
 interface Props {
   connectionId: ID;
-  disabledItems: ScopeItemType[];
   selectedItems: ScopeItemType[];
   onChangeItems: (selectedItems: ScopeItemType[]) => void;
 }
 
-export const GitLabDataScope = ({ connectionId, disabledItems, selectedItems, onChangeItems }: Props) => {
-  const handleChangeItems = (scope: ScopeItemType[]) => {
-    onChangeItems(scope);
-  };
+export const GitLabDataScope = ({ connectionId, onChangeItems, ...props }: Props) => {
+  const selectedItems = useMemo(
+    () => props.selectedItems.map((it) => ({ id: `${it.gitlabId}`, name: it.name, data: it })),
+    [props.selectedItems],
+  );
 
   return (
-    <>
-      <h4>Projects *</h4>
+    <S.DataScope>
+      <h3>Projects *</h3>
       <p>Select the project you would like to sync.</p>
-      <MillerColumns
+      <DataScopeMillerColumns
+        title="Subgroups/Projects"
+        plugin="gitlab"
         connectionId={connectionId}
-        disabledItems={disabledItems}
         selectedItems={selectedItems}
-        onChangeItems={handleChangeItems}
+        onChangeItems={onChangeItems}
       />
-      <h5>Add repositories outside of your projects</h5>
+      <h4>Add repositories outside of your projects</h4>
       <p>Search for repositories and add to them</p>
-      <ProjectSelector
+      <DataScopeSearch
+        plugin="gitlab"
         connectionId={connectionId}
-        disabledItems={disabledItems}
         selectedItems={selectedItems}
-        onChangeItems={handleChangeItems}
+        onChangeItems={onChangeItems}
       />
-    </>
+    </S.DataScope>
   );
 };

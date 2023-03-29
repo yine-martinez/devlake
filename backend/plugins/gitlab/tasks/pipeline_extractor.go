@@ -19,6 +19,7 @@ package tasks
 
 import (
 	"encoding/json"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
@@ -77,20 +78,23 @@ func ExtractApiPipelines(taskCtx plugin.SubTaskContext) errors.Error {
 			if gitlabApiPipeline.UpdatedAt != nil && gitlabApiPipeline.CreatedAt != nil {
 				gitlabApiPipeline.Duration = int(gitlabApiPipeline.UpdatedAt.ToTime().Sub(gitlabApiPipeline.CreatedAt.ToTime()).Seconds())
 			}
+
 			gitlabPipeline := &models.GitlabPipeline{
-				GitlabId:        gitlabApiPipeline.Id,
-				ProjectId:       data.Options.ProjectId,
-				WebUrl:          gitlabApiPipeline.WebUrl,
-				Status:          gitlabApiPipeline.Status,
-				GitlabCreatedAt: api.Iso8601TimeToTime(gitlabApiPipeline.CreatedAt),
-				GitlabUpdatedAt: api.Iso8601TimeToTime(gitlabApiPipeline.UpdatedAt),
-				StartedAt:       api.Iso8601TimeToTime(gitlabApiPipeline.StartedAt),
-				FinishedAt:      api.Iso8601TimeToTime(gitlabApiPipeline.FinishedAt),
-				Duration:        gitlabApiPipeline.Duration,
-				ConnectionId:    data.Options.ConnectionId,
+				GitlabId:         gitlabApiPipeline.Id,
+				ProjectId:        data.Options.ProjectId,
+				WebUrl:           gitlabApiPipeline.WebUrl,
+				Status:           gitlabApiPipeline.Status,
+				GitlabCreatedAt:  api.Iso8601TimeToTime(gitlabApiPipeline.CreatedAt),
+				GitlabUpdatedAt:  api.Iso8601TimeToTime(gitlabApiPipeline.UpdatedAt),
+				StartedAt:        api.Iso8601TimeToTime(gitlabApiPipeline.StartedAt),
+				FinishedAt:       api.Iso8601TimeToTime(gitlabApiPipeline.FinishedAt),
+				Duration:         gitlabApiPipeline.Duration,
+				ConnectionId:     data.Options.ConnectionId,
+				IsDetailRequired: false,
 			}
-			if err != nil {
-				return nil, err
+
+			if gitlabApiPipeline.CreatedAt == nil && gitlabApiPipeline.UpdatedAt == nil {
+				gitlabPipeline.IsDetailRequired = true
 			}
 
 			pipelineProject := &models.GitlabPipelineProject{
@@ -112,5 +116,10 @@ func ExtractApiPipelines(taskCtx plugin.SubTaskContext) errors.Error {
 		return err
 	}
 
-	return extractor.Execute()
+	err = extractor.Execute()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

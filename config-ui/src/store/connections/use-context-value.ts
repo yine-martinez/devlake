@@ -18,7 +18,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 
-import type { PluginConfigConnectionType } from '@/plugins';
 import { PluginConfig, PluginType } from '@/plugins';
 
 import type { ConnectionItemType } from './types';
@@ -28,15 +27,16 @@ import * as API from './api';
 export interface UseContextValueProps {
   plugin?: string;
   filterBeta?: boolean;
+  filter?: string[];
 }
 
-export const useContextValue = ({ plugin, filterBeta = false }: UseContextValueProps) => {
+export const useContextValue = ({ plugin, filterBeta = false, filter }: UseContextValueProps) => {
   const [loading, setLoading] = useState(false);
   const [connections, setConnections] = useState<ConnectionItemType[]>([]);
 
   const allConnections = useMemo(
     () =>
-      (PluginConfig.filter((p) => p.type === PluginType.Connection) as PluginConfigConnectionType[])
+      PluginConfig.filter((p) => p.type === PluginType.Connection)
         .filter((p) => (plugin ? p.plugin === plugin : true))
         .filter((p) => (filterBeta ? !p.isBeta : true)),
     [plugin],
@@ -57,13 +57,14 @@ export const useContextValue = ({ plugin, filterBeta = false }: UseContextValueP
 
     const resWithPlugin = res.map((cs, i) =>
       cs.map((it: any) => {
-        const { plugin, icon, entities } = allConnections[i];
+        const { plugin, icon, entities, transformation, transformationType } = allConnections[i];
 
         return {
           ...it,
           plugin,
           icon,
           entities,
+          transformationType: transformationType || (transformation ? 'for-connection' : 'none'),
         };
       }),
     );
@@ -77,6 +78,7 @@ export const useContextValue = ({ plugin, filterBeta = false }: UseContextValueP
         name: it.name,
         icon: it.icon,
         entities: it.entities,
+        transformationType: it.transformationType,
         endpoint: it.endpoint,
         proxy: it.proxy,
         token: it.token,
@@ -85,6 +87,7 @@ export const useContextValue = ({ plugin, filterBeta = false }: UseContextValueP
         firstValue: it.firstValue,
         lastValue: it.lastValue,
         spreadsheetID: it.spreadsheetID,
+        authMethod: it.authMethod,
       })),
     );
 
@@ -107,8 +110,9 @@ export const useContextValue = ({ plugin, filterBeta = false }: UseContextValueP
             : cs,
         ),
       );
-
-      const { plugin, endpoint, proxy, token, username, password, firstValue, lastValue, spreadsheetID } =
+      //TODO
+      // const { plugin, endpoint, proxy, token, username, password, authMethod } = selectedConnection;
+      const { plugin, endpoint, proxy, token, username, password, firstValue, lastValue, spreadsheetID, authMethod } =
         selectedConnection;
 
       let status = ConnectionStatusEnum.OFFLINE;
@@ -123,6 +127,7 @@ export const useContextValue = ({ plugin, filterBeta = false }: UseContextValueP
           firstValue,
           lastValue,
           spreadsheetID,
+          authMethod,
         });
         status = res.success ? ConnectionStatusEnum.ONLINE : ConnectionStatusEnum.OFFLINE;
       } catch {
@@ -146,7 +151,7 @@ export const useContextValue = ({ plugin, filterBeta = false }: UseContextValueP
   return useMemo(
     () => ({
       loading,
-      connections,
+      connections: filter ? connections.filter((cs) => !filter.includes(cs.unique)) : connections,
       onRefresh: handleRefresh,
       onTest: handleTest,
     }),

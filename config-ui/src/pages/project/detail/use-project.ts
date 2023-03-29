@@ -19,6 +19,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useHistory } from 'react-router-dom';
 
+import { toast } from '@/components';
 import type { WebhookItemType } from '@/plugins/register/webook';
 import { operator } from '@/utils';
 
@@ -54,6 +55,11 @@ export const useProject = (name: string) => {
   }, []);
 
   const handleUpdate = async (newName: string, enableDora: boolean) => {
+    if (!/^(\w|-|\/)+$/.test(newName)) {
+      toast.error('Please enter alphanumeric or underscore');
+      return;
+    }
+
     const payload = {
       name: newName,
       description: '',
@@ -121,6 +127,26 @@ export const useProject = (name: string) => {
     }
   };
 
+  const handleDeleteWebhook = async (id: ID) => {
+    const payload = {
+      ...project?.blueprint,
+      settings: {
+        version: '2.0.0',
+        connections: project?.blueprint.settings.connections.filter(
+          (cs: any) => !(cs.plugin === 'webhook' && cs.connectionId === id),
+        ),
+      },
+    };
+
+    const [success] = await operator(() => API.updateBlueprint(project?.blueprint.id, payload), {
+      setOperating: setSaving,
+    });
+
+    if (success) {
+      getProject();
+    }
+  };
+
   return useMemo(
     () => ({
       loading,
@@ -129,6 +155,7 @@ export const useProject = (name: string) => {
       onUpdate: handleUpdate,
       onSelectWebhook: handleSelectWebhook,
       onCreateWebhook: handleCreateWebhook,
+      onDeleteWebhook: handleDeleteWebhook,
     }),
     [loading, project, saving, name],
   );

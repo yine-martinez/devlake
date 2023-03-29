@@ -19,19 +19,27 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/plugins/gitlab/models"
+	"github.com/apache/incubator-devlake/server/api/shared"
 )
+
+type GitlabTestConnResponse struct {
+	shared.ApiBody
+	Connection *models.GitlabConn
+}
 
 // @Summary test gitlab connection
 // @Description Test gitlab Connection
 // @Tags plugins/gitlab
 // @Param body body models.GitlabConn true "json body"
-// @Success 200  {object} shared.ApiBody "Success"
+// @Success 200  {object} GitlabTestConnResponse "Success"
 // @Failure 400  {string} errcode.Error "Bad Request"
 // @Failure 500  {string} errcode.Error "Internal Error"
 // @Router /plugins/gitlab/test [POST]
@@ -42,26 +50,31 @@ func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, 
 	if err = api.Decode(input.Body, &connection, vld); err != nil {
 		return nil, err
 	}
-	// test connection
-	apiClient, err := api.NewApiClientFromConnection(context.TODO(), basicRes, connection)
+
+	apiClient, err := api.NewApiClientFromConnection(context.TODO(), basicRes, &connection)
 	if err != nil {
-		return nil, errors.Convert(err)
+		return nil, err
 	}
 
-	res, err := apiClient.Get("user", nil, nil)
+	// check API/read_api permissions
+	query := url.Values{}
+	query.Set("page", fmt.Sprintf("%v", 1))
+	query.Set("per_page", fmt.Sprintf("%v", 1))
+	res, err := apiClient.Get("projects", query, nil)
 	if err != nil {
-		return nil, errors.Convert(err)
-	}
-	resBody := &models.ApiUserResponse{}
-	err = api.UnmarshalResponse(res, resBody)
-	if err != nil {
-		return nil, errors.Convert(err)
+		return nil, err
 	}
 
-	if res.StatusCode != http.StatusOK {
-		return nil, errors.HttpStatus(res.StatusCode).New("unexpected status code while testing connection")
+	if res.StatusCode == http.StatusForbidden {
+		return nil, errors.BadInput.New("token need api or read_api permissions scope")
 	}
-	return nil, nil
+
+	body := GitlabTestConnResponse{}
+	body.Success = true
+	body.Message = "success"
+	body.Connection = &connection
+
+	return &plugin.ApiResourceOutput{Body: body, Status: http.StatusOK}, nil
 }
 
 // @Summary create gitlab connection

@@ -19,10 +19,12 @@ package tasks
 
 import (
 	"fmt"
+	"net/url"
+	"time"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
-	"net/url"
 )
 
 const RAW_PIPELINE_TABLE = "gitlab_api_pipeline"
@@ -31,28 +33,36 @@ var CollectApiPipelinesMeta = plugin.SubTaskMeta{
 	Name:             "collectApiPipelines",
 	EntryPoint:       CollectApiPipelines,
 	EnabledByDefault: true,
-	Description:      "Collect pipeline data from gitlab api",
+	Description:      "Collect pipeline data from gitlab api, supports both timeFilter and diffSync.",
 	DomainTypes:      []string{plugin.DOMAIN_TYPE_CICD},
 }
 
 func CollectApiPipelines(taskCtx plugin.SubTaskContext) errors.Error {
 	rawDataSubTaskArgs, data := CreateRawDataSubTaskArgs(taskCtx, RAW_PIPELINE_TABLE)
-	collectorWithState, err := helper.NewApiCollectorWithState(*rawDataSubTaskArgs, data.CreatedDateAfter)
+	collectorWithState, err := helper.NewStatefulApiCollector(*rawDataSubTaskArgs, data.TimeAfter)
 	if err != nil {
 		return err
 	}
 
+	tickInterval, err := helper.CalcTickInterval(200, 1*time.Minute)
+	if err != nil {
+		return err
+	}
 	incremental := collectorWithState.IsIncremental()
 	err = collectorWithState.InitCollector(helper.ApiCollectorArgs{
 		RawDataSubTaskArgs: *rawDataSubTaskArgs,
 		ApiClient:          data.ApiClient,
+		MinTickInterval:    &tickInterval,
 		PageSize:           100,
 		Incremental:        incremental,
 		UrlTemplate:        "projects/{{ .Params.ProjectId }}/pipelines",
 		Query: func(reqData *helper.RequestData) (url.Values, errors.Error) {
 			query := url.Values{}
+			if collectorWithState.TimeAfter != nil {
+				query.Set("updated_after", collectorWithState.TimeAfter.Format(time.RFC3339))
+			}
 			if incremental {
-				query.Set("updated_after", collectorWithState.LatestState.LatestSuccessStart.String())
+				query.Set("updated_after", collectorWithState.LatestState.LatestSuccessStart.Format(time.RFC3339))
 			}
 			query.Set("with_stats", "true")
 			query.Set("sort", "asc")

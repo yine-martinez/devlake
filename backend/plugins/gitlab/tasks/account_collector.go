@@ -19,11 +19,14 @@ package tasks
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/url"
+
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/plugin"
 	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
-	"net/http"
-	"net/url"
+	"github.com/apache/incubator-devlake/plugins/gitlab/models"
+	"golang.org/x/mod/semver"
 )
 
 const RAW_USER_TABLE = "gitlab_api_users"
@@ -32,7 +35,7 @@ var CollectAccountsMeta = plugin.SubTaskMeta{
 	Name:             "collectAccounts",
 	EntryPoint:       CollectAccounts,
 	EnabledByDefault: true,
-	Description:      "collect gitlab users",
+	Description:      "collect gitlab users, does not support either timeFilter or diffSync.",
 	DomainTypes:      []string{plugin.DOMAIN_TYPE_CROSS},
 }
 
@@ -41,10 +44,16 @@ func CollectAccounts(taskCtx plugin.SubTaskContext) errors.Error {
 	logger := taskCtx.GetLogger()
 	logger.Info("collect gitlab users")
 
+	// it means we can not use /members/all to get the data
+	urlTemplate := "/projects/{{ .Params.ProjectId }}/members/all"
+	if semver.Compare(data.ApiClient.GetData(models.GitlabApiClientData_ApiVersion).(string), "v13.11") < 0 {
+		urlTemplate = "/projects/{{ .Params.ProjectId }}/members/"
+	}
+
 	collector, err := api.NewApiCollector(api.ApiCollectorArgs{
 		RawDataSubTaskArgs: *rawDataSubTaskArgs,
 		ApiClient:          data.ApiClient,
-		UrlTemplate:        "/projects/{{ .Params.ProjectId }}/members/all",
+		UrlTemplate:        urlTemplate,
 		//PageSize:           100,
 		Query: func(reqData *api.RequestData) (url.Values, errors.Error) {
 			query := url.Values{}

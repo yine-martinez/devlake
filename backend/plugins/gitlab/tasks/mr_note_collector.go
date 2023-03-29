@@ -29,13 +29,13 @@ var CollectApiMrNotesMeta = plugin.SubTaskMeta{
 	Name:             "collectApiMergeRequestsNotes",
 	EntryPoint:       CollectApiMergeRequestsNotes,
 	EnabledByDefault: true,
-	Description:      "Collect merge requests notes data from gitlab api",
+	Description:      "Collect merge requests notes data from gitlab api, supports timeFilter but not diffSync.",
 	DomainTypes:      []string{plugin.DOMAIN_TYPE_CODE_REVIEW},
 }
 
 func CollectApiMergeRequestsNotes(taskCtx plugin.SubTaskContext) errors.Error {
 	rawDataSubTaskArgs, data := CreateRawDataSubTaskArgs(taskCtx, RAW_MERGE_REQUEST_NOTES_TABLE)
-	collectorWithState, err := helper.NewApiCollectorWithState(*rawDataSubTaskArgs, data.CreatedDateAfter)
+	collectorWithState, err := helper.NewStatefulApiCollector(*rawDataSubTaskArgs, data.TimeAfter)
 	if err != nil {
 		return err
 	}

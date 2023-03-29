@@ -18,7 +18,7 @@
 
 import type { PluginConfigType } from '@/plugins';
 
-import {
+import /*
   BaseConnectionConfig,
   ConnectionName,
   ConnectionEndpoint,
@@ -27,9 +27,12 @@ import {
   ConnectionSpreadsheetId,
   ConnectionFirstValue,
   ConnectionLastValue,
-} from '../base';
 
+   */
+'../base';
+/*
 import Icon from './assets/icon.svg';
+
 
 export const GoogleConfig: PluginConfigType = {
   ...BaseConnectionConfig,
@@ -60,3 +63,6 @@ export const GoogleConfig: PluginConfigType = {
   entities: ['DATA'],
   transformation: {},
 };
+
+
+ */

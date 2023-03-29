@@ -20,6 +20,8 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/apache/incubator-devlake/core/dal"
 	"github.com/apache/incubator-devlake/core/errors"
 	"github.com/apache/incubator-devlake/core/models"
@@ -27,20 +29,33 @@ import (
 	helper "github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"github.com/apache/incubator-devlake/impls/logruslog"
 	"github.com/robfig/cron/v3"
-	"strings"
 )
 
 // BlueprintQuery is a query for GetBlueprints
 type BlueprintQuery struct {
 	Pagination
 	Enable   *bool  `form:"enable,omitempty"`
-	IsManual *bool  `form:"is_manual"`
+	IsManual *bool  `form:"isManual"`
 	Label    string `form:"label"`
 }
 
 var (
 	blueprintLog = logruslog.Global.Nested("blueprint")
 )
+
+type BlueprintJob struct {
+	Blueprint *models.Blueprint
+}
+
+func (bj BlueprintJob) Run() {
+	blueprint := bj.Blueprint
+	pipeline, err := createPipelineByBlueprint(blueprint)
+	if err != nil {
+		blueprintLog.Error(err, fmt.Sprintf("run cron job failed on blueprint:[%d][%s]", blueprint.ID, blueprint.Name))
+	} else {
+		blueprintLog.Info("Run new cron job successfully,blueprint id:[%d] pipeline id:[%d]", blueprint.ID, pipeline.ID)
+	}
+}
 
 // CreateBlueprint accepts a Blueprint instance and insert it to database
 func CreateBlueprint(blueprint *models.Blueprint) errors.Error {
@@ -219,14 +234,13 @@ func ReloadBlueprints(c *cron.Cron) errors.Error {
 			blueprintLog.Error(err, failToCreateCronJob)
 			return err
 		}
-		if _, err := c.AddFunc(blueprint.CronConfig, func() {
-			pipeline, err := createPipelineByBlueprint(blueprint)
-			if err != nil {
-				blueprintLog.Error(err, "run cron job failed")
-			} else {
-				blueprintLog.Info("Run new cron job successfully, pipeline id: %d", pipeline.ID)
-			}
-		}); err != nil {
+
+		blueprintLog.Info("Add blueprint id:[%d] cronConfg[%s] to cron job", blueprint.ID, blueprint.CronConfig)
+		blueprintJob := &BlueprintJob{
+			Blueprint: blueprint,
+		}
+
+		if _, err := c.AddJob(blueprint.CronConfig, blueprintJob); err != nil {
 			blueprintLog.Error(err, failToCreateCronJob)
 			return errors.Default.Wrap(err, "created cron job failed")
 		}
@@ -247,6 +261,7 @@ func createPipelineByBlueprint(blueprint *models.Blueprint) (*models.Pipeline, e
 		plan, err = blueprint.UnmarshalPlan()
 	}
 	if err != nil {
+		blueprintLog.Error(err, fmt.Sprintf("failed to MakePlanForBlueprint on blueprint:[%d][%s]", blueprint.ID, blueprint.Name))
 		return nil, err
 	}
 	newPipeline := models.NewPipeline{}
@@ -258,7 +273,7 @@ func createPipelineByBlueprint(blueprint *models.Blueprint) (*models.Pipeline, e
 	pipeline, err := CreatePipeline(&newPipeline)
 	// Return all created tasks to the User
 	if err != nil {
-		blueprintLog.Error(err, failToCreateCronJob)
+		blueprintLog.Error(err, fmt.Sprintf("%s on blueprint:[%d][%s]", failToCreateCronJob, blueprint.ID, blueprint.Name))
 		return nil, errors.Convert(err)
 	}
 	return pipeline, nil
@@ -273,12 +288,12 @@ func MakePlanForBlueprint(blueprint *models.Blueprint) (plugin.PipelinePlan, err
 	}
 
 	bpSyncPolicy := plugin.BlueprintSyncPolicy{}
-	bpSyncPolicy.CreatedDateAfter = bpSettings.CreatedDateAfter
+	bpSyncPolicy.TimeAfter = bpSettings.TimeAfter
 
 	var plan plugin.PipelinePlan
 	switch bpSettings.Version {
 	case "1.0.0":
-		// Notice: v1 not complete SkipOnFail & CreatedDateAfter
+		// Notice: v1 not complete SkipOnFail & TimeAfter
 		plan, err = GeneratePlanJsonV100(bpSettings)
 	case "2.0.0":
 		// load project metric plugins and convert it to a map

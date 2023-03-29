@@ -17,6 +17,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import type { McsItem } from 'miller-columns-select';
 import MillerColumnsSelect from 'miller-columns-select';
 
 import { Loading } from '@/components';
@@ -27,40 +28,40 @@ import type { UseMillerColumnsProps } from './use-miller-columns';
 import { useMillerColumns } from './use-miller-columns';
 
 interface Props extends UseMillerColumnsProps {
-  disabledItems?: ScopeItemType[];
-  selectedItems?: ScopeItemType[];
-  onChangeItems?: (selectedItems: ScopeItemType[]) => void;
+  selectedItems: ScopeItemType[];
+  onChangeItems: (selectedItems: ScopeItemType[]) => void;
 }
 
-export const MillerColumns = ({ connectionId, disabledItems, selectedItems, onChangeItems }: Props) => {
-  const [disabledIds, setDisabledIds] = useState<ID[]>([]);
+export const MillerColumns = ({ connectionId, selectedItems, onChangeItems }: Props) => {
   const [selectedIds, setSelectedIds] = useState<ID[]>([]);
 
-  const { items, getHasMore, onScrollColumn } = useMillerColumns({
+  const { items, getHasMore, onScroll } = useMillerColumns({
     connectionId,
   });
 
   useEffect(() => {
-    setDisabledIds((disabledItems ?? []).map((it) => it.boardId));
-  }, [disabledItems]);
-
-  useEffect(() => {
-    setSelectedIds((selectedItems ?? []).map((it) => it.boardId));
+    setSelectedIds(selectedItems.map((it) => it.boardId));
   }, [selectedItems]);
 
   const handleChangeItems = (selectedIds: ID[]) => {
-    const result = items
-      .filter((it) => selectedIds.includes(it.id))
-      .map((it) => ({
-        connectionId,
-        boardId: it.boardId,
-        name: it.name,
-        self: it.self,
-        type: it.type,
-        projectId: it.projectId,
-      }));
+    const result = selectedIds.map((id) => {
+      const selectedItem = selectedItems.find((it) => it.boardId === id);
+      if (selectedItem) {
+        return selectedItem;
+      }
 
-    onChangeItems?.(result);
+      const item = items.find((it) => it.id === id) as McsItem<ScopeItemType>;
+      return {
+        connectionId,
+        boardId: item.boardId,
+        name: item.name,
+        self: item.self,
+        type: item.type,
+        projectId: item.projectId,
+      };
+    });
+
+    onChangeItems(result);
   };
 
   const renderLoading = () => {
@@ -69,15 +70,14 @@ export const MillerColumns = ({ connectionId, disabledItems, selectedItems, onCh
 
   return (
     <MillerColumnsSelect
+      items={items}
+      getHasMore={getHasMore}
+      onScroll={onScroll}
       columnCount={1}
       columnHeight={300}
-      getHasMore={getHasMore}
       renderLoading={renderLoading}
-      items={items}
-      disabledIds={disabledIds}
       selectedIds={selectedIds}
       onSelectItemIds={handleChangeItems}
-      onScrollColumn={onScrollColumn}
     />
   );
 };

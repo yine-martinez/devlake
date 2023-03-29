@@ -19,6 +19,8 @@ package impl
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/apache/incubator-devlake/core/context"
 	"github.com/apache/incubator-devlake/core/dal"
 	"github.com/apache/incubator-devlake/core/errors"
@@ -28,7 +30,6 @@ import (
 	"github.com/apache/incubator-devlake/plugins/tapd/models"
 	"github.com/apache/incubator-devlake/plugins/tapd/models/migrationscripts"
 	"github.com/apache/incubator-devlake/plugins/tapd/tasks"
-	"time"
 )
 
 var _ plugin.PluginMeta = (*Tapd)(nil)
@@ -57,7 +58,6 @@ func (p Tapd) GetTablesInfo() []dal.Tabler {
 		&models.TapdBugLabel{},
 		&models.TapdBugStatus{},
 		&models.TapdConnection{},
-		&models.TapdConnectionDetail{},
 		&models.TapdIssue{},
 		&models.TapdIteration{},
 		&models.TapdIterationBug{},
@@ -187,6 +187,9 @@ func (p Tapd) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]int
 	if err != nil {
 		return nil, errors.Default.Wrap(err, "failed to create tapd api client")
 	}
+	if op.PageSize == 0 {
+		op.PageSize = 100
+	}
 	cstZone, err1 := time.LoadLocation("Asia/Shanghai")
 	if err1 != nil {
 		return nil, errors.Default.Wrap(err1, "fail to get CST Location")
@@ -197,16 +200,16 @@ func (p Tapd) PrepareTaskData(taskCtx plugin.TaskContext, options map[string]int
 		ApiClient:  tapdApiClient,
 		Connection: connection,
 	}
-	var createdDateAfter time.Time
-	if op.CreatedDateAfter != "" {
-		createdDateAfter, err = errors.Convert01(time.Parse(time.RFC3339, op.CreatedDateAfter))
+	var timeAfter time.Time
+	if op.TimeAfter != "" {
+		timeAfter, err = errors.Convert01(time.Parse(time.RFC3339, op.TimeAfter))
 		if err != nil {
-			return nil, errors.BadInput.Wrap(err, "invalid value for `createdDateAfter`")
+			return nil, errors.BadInput.Wrap(err, "invalid value for `timeAfter`")
 		}
 	}
-	if !createdDateAfter.IsZero() {
-		taskData.CreatedDateAfter = &createdDateAfter
-		logger.Debug("collect data updated createdDateAfter %s", createdDateAfter)
+	if !timeAfter.IsZero() {
+		taskData.TimeAfter = &timeAfter
+		logger.Debug("collect data updated timeAfter %s", timeAfter)
 	}
 	return taskData, nil
 }
