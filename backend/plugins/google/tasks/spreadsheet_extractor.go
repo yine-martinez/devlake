@@ -124,7 +124,7 @@ func formatData(data *spreadSheetStructure) (*models.GoogleSpreadSheet, errors.E
 		flowEfficiency = strings.Replace(data.FlowEfficiency, "%", "", -1)
 		formattedData.FlowEfficiency, _ = strconv.ParseFloat(flowEfficiency, 8) //nolint
 	} else {
-		return formattedData, errors.BadInput.New("Could not format FlowEfficiency")
+		return formattedData, errors.BadInput.New("Could not format FlowEfficiency - no value for FlowEfficiency")
 	}
 
 	if data.StartSprint != "" {
@@ -132,7 +132,7 @@ func formatData(data *spreadSheetStructure) (*models.GoogleSpreadSheet, errors.E
 		formattedData.StartSprint, _ = time.Parse(format, data.StartSprint)
 		formattedData.EndSprint, _ = time.Parse(format, data.EndSprint)
 	} else {
-		return formattedData, errors.BadInput.New("Could not format StartSprint")
+		return formattedData, errors.BadInput.New("Could not format StartSprint - no value for data")
 	}
 
 	return formattedData, nil
