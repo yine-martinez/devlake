@@ -31,7 +31,10 @@ import (
 
 var _ plugin.SubTaskEntryPoint = ExtractGooglespreadsheet
 
+var taskCTX plugin.SubTaskContext
+
 func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
+	taskCTX = taskCtx
 	logger := taskCtx.GetLogger()
 	logger.Info("extract data from google spreadsheet")
 	data := taskCtx.GetData().(*GoogleTaskData)
@@ -140,8 +143,8 @@ func formatData(data *spreadSheetStructure) (*models.GoogleSpreadSheet, errors.E
 	return formattedData, nil
 }
 
-func extractData(resData *helper.RawData, taskCtx plugin.SubTaskContext) ([]interface{}, errors.Error) {
-	logger := taskCtx.GetLogger()
+func extractData(resData *helper.RawData) ([]interface{}, errors.Error) {
+	logger := taskCTX.GetLogger()
 	extractedModels := make([]interface{}, 0)
 	extractedData := make([]interface{}, 0)
 	errUnmarshal := json.Unmarshal(resData.Data, &extractedData)
