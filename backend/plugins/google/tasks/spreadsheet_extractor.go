@@ -35,6 +35,7 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 	logger := taskCtx.GetLogger()
 	logger.Info("extract data from google spreadsheet")
 	data := taskCtx.GetData().(*GoogleTaskData)
+	// var resData *helper.RawData
 	extractor, err := helper.NewApiExtractor(helper.ApiExtractorArgs{
 		RawDataSubTaskArgs: helper.RawDataSubTaskArgs{
 			Ctx: taskCtx,
@@ -45,35 +46,36 @@ func ExtractGooglespreadsheet(taskCtx plugin.SubTaskContext) errors.Error {
 			},
 			Table: RAW_SPREADSHEET_TABLE,
 		},
-		Extract: func(resData *helper.RawData) ([]interface{}, errors.Error) {
-			extractedModels := make([]interface{}, 0)
-			extractedData := make([]interface{}, 0)
-			errUnmarshal := json.Unmarshal(resData.Data, &extractedData)
-			if errUnmarshal != nil {
-				logger.Error(errUnmarshal, "error unmarshalling json")
-			}
-			for _, line := range extractedData {
-				data := &spreadSheetStructure{}
-				rawData, errMarshal := json.Marshal(line)
-				if errMarshal != nil {
-					logger.Error(errUnmarshal, "error marshalling json")
-				}
-				errUnmarshal = json.Unmarshal(rawData, &data)
-				if errUnmarshal != nil {
-					logger.Error(errUnmarshal, "error unmarshalling rawData json")
-				}
+		Extract: extractData,
+		// Extract: func(resData *helper.RawData) ([]interface{}, errors.Error) {
+		// 	extractedModels := make([]interface{}, 0)
+		// 	extractedData := make([]interface{}, 0)
+		// 	errUnmarshal := json.Unmarshal(resData.Data, &extractedData)
+		// 	if errUnmarshal != nil {
+		// 		logger.Error(errUnmarshal, "error unmarshalling json")
+		// 	}
+		// 	for _, line := range extractedData {
+		// 		data := &spreadSheetStructure{}
+		// 		rawData, errMarshal := json.Marshal(line)
+		// 		if errMarshal != nil {
+		// 			logger.Error(errUnmarshal, "error marshalling json")
+		// 		}
+		// 		errUnmarshal = json.Unmarshal(rawData, &data)
+		// 		if errUnmarshal != nil {
+		// 			logger.Error(errUnmarshal, "error unmarshalling rawData json")
+		// 		}
 
-				formattedData, err := formatData(data)
-				if err != nil {
-					logger.Error(err, "error formatData")
-					continue
-				}
+		// 		formattedData, err := formatData(data)
+		// 		if err != nil {
+		// 			logger.Error(err, "error formatData")
+		// 			continue
+		// 		}
 
-				extractedModels = append(extractedModels, formattedData)
-			}
+		// 		extractedModels = append(extractedModels, formattedData)
+		// 	}
 
-			return extractedModels, nil
-		},
+		// 	return extractedModels, nil
+		// },
 	})
 	if err != nil {
 		return err
@@ -136,4 +138,35 @@ func formatData(data *spreadSheetStructure) (*models.GoogleSpreadSheet, errors.E
 	}
 
 	return formattedData, nil
+}
+
+func extractData(resData *helper.RawData, taskCtx plugin.SubTaskContext) ([]interface{}, errors.Error) {
+	logger := taskCtx.GetLogger()
+	extractedModels := make([]interface{}, 0)
+	extractedData := make([]interface{}, 0)
+	errUnmarshal := json.Unmarshal(resData.Data, &extractedData)
+	if errUnmarshal != nil {
+		logger.Error(errUnmarshal, "error unmarshalling json")
+	}
+	for _, line := range extractedData {
+		data := &spreadSheetStructure{}
+		rawData, errMarshal := json.Marshal(line)
+		if errMarshal != nil {
+			logger.Error(errUnmarshal, "error marshalling json")
+		}
+		errUnmarshal = json.Unmarshal(rawData, &data)
+		if errUnmarshal != nil {
+			logger.Error(errUnmarshal, "error unmarshalling rawData json")
+		}
+
+		formattedData, err := formatData(data)
+		if err != nil {
+			logger.Error(err, "error formatData")
+			continue
+		}
+
+		extractedModels = append(extractedModels, formattedData)
+	}
+
+	return extractedModels, nil
 }
