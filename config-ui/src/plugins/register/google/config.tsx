@@ -16,70 +16,61 @@
  *
  */
 
-/*
 import React from 'react';
 
 import type { PluginConfigType } from '@/plugins';
 import { PluginType } from '@/plugins';
 
 import Icon from './assets/icon.svg';
-import { Token, Graphql } from './connection-fields';
+
+import { SpreadsheetID, FirstValue, LastValue } from './connection-fields';
 
 export const GoogleConfig: PluginConfigType = {
   type: PluginType.Connection,
   plugin: 'google',
-  name: 'Google',
+  name: 'google',
   icon: Icon,
-  sort: 1,
+  sort: 101,
   connection: {
-    //docLink: 'https://devlake.apache.org/docs/Configuration/GitHub',
+    docLink: 'https://devlake.apache.org/docs/Configuration/GitHub',
     initialValues: {
-      endpoint: 'https://api.github.com/',
-      enableGraphql: true,
+      endpoint: 'https://sheets.googleapis.com/v4',
     },
     fields: [
       'name',
-      {
-        key: 'endpoint',
-        multipleVersions: {
-          cloud: 'https://api.github.com/',
-          server: ' ',
-        },
-      },
+      'token',
+      'endpoint',
       ({ initialValues, values, errors, setValues, setErrors }: any) => (
-        <Token
-          key="token"
-          endpoint={values.endpoint}
-          proxy={values.proxy}
-          initialValue={initialValues.token ?? ''}
-          value={values.token ?? ''}
-          error={errors.token ?? ''}
-          setValue={(value) => setValues({ token: value })}
-          setError={(value) => setErrors({ token: value })}
+        <SpreadsheetID
+          name="spreadsheetID"
+          key="spreadsheetID"
+          initialValue={initialValues.spreadsheetID ?? ''}
+          value={values.spreadsheetID ?? ''}
+          error={errors.spreadsheetID ?? ''}
+          setValue={(value) => setValues({ spreadsheetID: value })}
+          setError={(value) => setErrors({ spreadsheetID: value })}
         />
       ),
-      'proxy',
-      ({ initialValues, values, setValues }: any) => (
-        <Graphql
-          key="graphql"
-          initialValue={initialValues.enableGraphql ?? false}
-          value={values.enableGraphql ?? false}
-          setValue={(value) => setValues({ enableGraphql: value })}
+      ({ initialValues, values, setValues, setErrors }: any) => (
+        <FirstValue
+          initialValue={initialValues.firstValue ?? ''}
+          value={values.firstValue ?? ''}
+          setValue={(value) => setValues({ firstValue: value })}
+          setError={(value) => setErrors({ firstValue: value })}
         />
       ),
-      {
-        key: 'rateLimitPerHour',
-        subLabel:
-          'By default, DevLake uses dynamic rate limit for optimized data collection for GitHub. But you can adjust the collection speed by entering a fixed value. Please note: the rate limit setting applies to all tokens you have entered above.',
-        learnMore: 'https://devlake.apache.org/docs/Configuration/GitHub/#fixed-rate-limit-optional',
-        externalInfo:
-          'Rate Limit Value Reference\nGitHub: 0-5,000 requests/hour\nGitHub Enterprise: 0-15,000 requests/hour',
-        defaultValue: 4500,
-      },
+      ({ initialValues, values, errors, setValues, setErrors }: any) => (
+        <LastValue
+          key="LastValue"
+          initialValue={initialValues.lastValue ?? ''}
+          value={values.lastValue ?? ''}
+          error={errors.lastValue ?? ''}
+          setValue={(value) => setValues({ lastValue: value })}
+          setError={(value) => setErrors({ lastValue: value })}
+        />
+      ),
     ],
   },
   entities: [],
   transformation: {},
 };
-
- */

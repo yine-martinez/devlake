@@ -16,9 +16,47 @@
  *
  */
 
+import { Colors } from '@blueprintjs/core';
 import styled from 'styled-components';
 
-export const ColumnTitle = styled.div`
-  padding: 6px 12px;
+export const Label = styled.label`
+  font-size: 16px;
   font-weight: 600;
+`;
+
+export const LabelInfo = styled.i`
+  color: #ff8b8b;
+`;
+
+export const LabelDescription = styled.p`
+  margin: 0;
+`;
+
+export const Endpoint = styled.div`
+  p {
+    margin: 10px 0;
+  }
+`;
+
+export const Token = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+
+  .input {
+    display: flex;
+    align-items: center;
+  }
+
+  .info {
+    margin-left: 4px;
+
+    span.error {
+      color: ${Colors.RED3};
+    }
+
+    span.success {
+      color: ${Colors.GREEN3};
+    }
+  }
 `;

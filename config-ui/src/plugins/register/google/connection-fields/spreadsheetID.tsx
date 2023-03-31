@@ -33,21 +33,13 @@ interface Props {
   setError: (error: string) => void;
 }
 
-export const ConnectionUsername = ({
-  label,
-  subLabel,
-  placeholder,
-  initialValue,
-  value,
-  setValue,
-  setError,
-}: Props) => {
+export const SpreadsheetID = ({ label, subLabel, initialValue, value, setValue, setError }: Props) => {
   useEffect(() => {
     setValue(initialValue);
   }, [initialValue]);
 
   useEffect(() => {
-    setError(value ? '' : 'username is required');
+    setError(value ? '' : 'spreadsheet ID is required');
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,11 +48,11 @@ export const ConnectionUsername = ({
 
   return (
     <FormGroup
-      label={<S.Label>{label ?? 'Username'}</S.Label>}
+      label={<S.Label>{label ?? 'Spreadsheet ID'}</S.Label>}
       labelInfo={<S.LabelInfo>*</S.LabelInfo>}
-      subLabel={subLabel ? <S.LabelDescription>{subLabel}</S.LabelDescription> : null}
+      subLabel={<S.LabelDescription>The unique ID from the the Google spreadsheet</S.LabelDescription>}
     >
-      <InputGroup placeholder={placeholder ?? 'Your Username'} value={value} onChange={handleChange} />
+      <InputGroup placeholder="Your spreadsheet ID" value={value} onChange={handleChange} />
     </FormGroup>
   );
 };

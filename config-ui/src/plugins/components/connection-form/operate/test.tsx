@@ -50,6 +50,9 @@ export const Test = ({ plugin, values, errors }: Props) => {
         'secretKey',
         'tenantId',
         'tenantType',
+        'lastValue',
+        'firstValue',
+        'spreadsheetID',
       ]),
     );
   };

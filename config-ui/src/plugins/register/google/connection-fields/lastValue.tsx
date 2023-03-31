@@ -25,7 +25,6 @@ interface Props {
   label?: string;
   subLabel?: string;
   placeholder?: string;
-  name: string;
   initialValue: string;
   value: string;
   error: string;
@@ -33,21 +32,13 @@ interface Props {
   setError: (error: string) => void;
 }
 
-export const ConnectionUsername = ({
-  label,
-  subLabel,
-  placeholder,
-  initialValue,
-  value,
-  setValue,
-  setError,
-}: Props) => {
+export const LastValue = ({ label, subLabel, initialValue, value, setValue, setError }: Props) => {
   useEffect(() => {
     setValue(initialValue);
   }, [initialValue]);
 
   useEffect(() => {
-    setError(value ? '' : 'username is required');
+    setError(value ? '' : 'spreadsheet last value is required');
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,11 +47,11 @@ export const ConnectionUsername = ({
 
   return (
     <FormGroup
-      label={<S.Label>{label ?? 'Username'}</S.Label>}
+      label={<S.Label>{label ?? 'Last Value'}</S.Label>}
       labelInfo={<S.LabelInfo>*</S.LabelInfo>}
-      subLabel={subLabel ? <S.LabelDescription>{subLabel}</S.LabelDescription> : null}
+      subLabel={<S.LabelDescription>The last value from the Google spreadsheet you want to import</S.LabelDescription>}
     >
-      <InputGroup placeholder={placeholder ?? 'Your Username'} value={value} onChange={handleChange} />
+      <InputGroup placeholder="Your spreadsheet last value" value={value} onChange={handleChange} />
     </FormGroup>
   );
 };

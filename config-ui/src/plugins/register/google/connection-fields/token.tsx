@@ -24,30 +24,21 @@ import * as S from './styled';
 interface Props {
   label?: string;
   subLabel?: string;
-  placeholder?: string;
   name: string;
   initialValue: string;
   value: string;
   error: string;
   setValue: (value: string) => void;
-  setError: (error: string) => void;
+  setError: (value: string) => void;
 }
 
-export const ConnectionUsername = ({
-  label,
-  subLabel,
-  placeholder,
-  initialValue,
-  value,
-  setValue,
-  setError,
-}: Props) => {
+export const GoogleToken = ({ label, subLabel, initialValue, value, setValue, setError }: Props) => {
   useEffect(() => {
     setValue(initialValue);
   }, [initialValue]);
 
   useEffect(() => {
-    setError(value ? '' : 'username is required');
+    setError(value ? '' : 'token is required');
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,11 +47,11 @@ export const ConnectionUsername = ({
 
   return (
     <FormGroup
-      label={<S.Label>{label ?? 'Username'}</S.Label>}
+      label={<S.Label>{label ?? 'Token'}</S.Label>}
       labelInfo={<S.LabelInfo>*</S.LabelInfo>}
-      subLabel={subLabel ? <S.LabelDescription>{subLabel}</S.LabelDescription> : null}
+      subLabel={subLabel && <S.LabelDescription>{subLabel}</S.LabelDescription>}
     >
-      <InputGroup placeholder={placeholder ?? 'Your Username'} value={value} onChange={handleChange} />
+      <InputGroup type="password" placeholder="Your Token" value={value} onChange={handleChange} />
     </FormGroup>
   );
 };
