@@ -299,8 +299,15 @@ func PostDeploymentCicdTask(input *plugin.ApiResourceInput) (*plugin.ApiResource
 	}
 
 	db := basicRes.GetDal()
+
+	mayRelatedRepo := code.Repo{}
+	relatedRepoErr := db.First(&mayRelatedRepo, dal.Where("url = ?", request.RepoUrl))
+	//if relatedRepoErr == nil {
+	//	domainPipelineCommit.RepoId = mayRelatedRepo.Id
+	//
 	urlHash16 := fmt.Sprintf("%x", md5.Sum([]byte(request.RepoUrl)))[:16]
-	scopeId := fmt.Sprintf("%s:%d", "webhook", connection.ID)
+	//scopeId := fmt.Sprintf("%s:%d", "webhook", connection.ID) //TODO CHANGE HERE
+	scopeId := mayRelatedRepo.Id
 	pipelineId := fmt.Sprintf("%s:%d:%s:%s:%s", "webhook", connection.ID, `pipeline`, urlHash16, request.CommitSha)
 
 	taskId := fmt.Sprintf("%s:%d:%s:%s", "webhook", connection.ID, urlHash16, request.CommitSha)
@@ -354,8 +361,8 @@ func PostDeploymentCicdTask(input *plugin.ApiResourceInput) (*plugin.ApiResource
 		Repo:       request.RepoUrl,
 	}
 
-	mayRelatedRepo := code.Repo{}
-	relatedRepoErr := db.First(&mayRelatedRepo, dal.Where("url = ?", request.RepoUrl))
+	//mayRelatedRepo := code.Repo{}
+	//relatedRepoErr := db.First(&mayRelatedRepo, dal.Where("url = ?", request.RepoUrl))
 	if relatedRepoErr == nil {
 		domainPipelineCommit.RepoId = mayRelatedRepo.Id
 	}

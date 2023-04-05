@@ -32,19 +32,12 @@ import (
 // TODO Please modify the following code to fit your needs
 func TestConnection(input *plugin.ApiResourceInput) (*plugin.ApiResourceOutput, errors.Error) {
 
-	fmt.Println("here")
 	var err errors.Error
 	var connection models.GoogleConnection
 	errorDecode := mapstructure.Decode(input.Body, &connection)
 	if errorDecode != nil {
 		return nil, errors.Convert(errorDecode)
 	}
-	fmt.Println(connection)
-	fmt.Println(connection.Endpoint)
-	fmt.Println(connection.SpreadsheetID)
-	fmt.Println(connection.Token)
-	fmt.Println(connection.FirstValue)
-	fmt.Println(connection.LastValue)
 	headers := map[string]string{
 		"Authorization": fmt.Sprintf("Bearer %v", connection.Token),
 	}
