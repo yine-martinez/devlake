@@ -306,8 +306,10 @@ func PostDeploymentCicdTask(input *plugin.ApiResourceInput) (*plugin.ApiResource
 	//	domainPipelineCommit.RepoId = mayRelatedRepo.Id
 	//
 	urlHash16 := fmt.Sprintf("%x", md5.Sum([]byte(request.RepoUrl)))[:16]
-	//scopeId := fmt.Sprintf("%s:%d", "webhook", connection.ID) //TODO CHANGE HERE
-	scopeId := mayRelatedRepo.Id
+	scopeId := fmt.Sprintf("%s:%d", "webhook", connection.ID)
+	if mayRelatedRepo.Id != "" {
+		scopeId = mayRelatedRepo.Id
+	}
 	pipelineId := fmt.Sprintf("%s:%d:%s:%s:%s", "webhook", connection.ID, `pipeline`, urlHash16, request.CommitSha)
 
 	taskId := fmt.Sprintf("%s:%d:%s:%s", "webhook", connection.ID, urlHash16, request.CommitSha)
