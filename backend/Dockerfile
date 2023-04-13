@@ -99,7 +99,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
         export GOARCH=amd64 ; \
     fi && \
     export PKG_CONFIG_PATH=/usr/local/deps/target/lib/pkgconfig && \
-    export CGO_ENABLED=1 &&\
+    export CGO_ENABLED=1 && \
     make all
 
 # remove symlink in lib, we will recreate in final image
