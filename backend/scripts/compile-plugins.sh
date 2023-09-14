@@ -53,10 +53,6 @@ PIDS=""
 for PLUG in $PLUGINS; do
     NAME=$(basename $PLUG)
     echo "Building plugin $NAME to bin/plugins/$NAME/$NAME.so"
-    go build -buildmode=plugin "$@" -o $PLUGIN_OUTPUT_DIR/$NAME/$NAME.so $PLUG/*.go &
+    go build -buildmode=plugin "$@" -o $PLUGIN_OUTPUT_DIR/$NAME/$NAME.so $PLUG/*.go
     PIDS="$PIDS $!"
-done
-
-for PID in $PIDS; do
-    wait $PID
 done

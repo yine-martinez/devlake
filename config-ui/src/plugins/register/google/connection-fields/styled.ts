@@ -16,18 +16,47 @@
  *
  */
 
-import { request } from '@/utils';
+import { Colors } from '@blueprintjs/core';
+import styled from 'styled-components';
 
-export const testConnection = (plugin: string, payload: any) =>
-  request(`/plugins/${plugin}/test`, { method: 'post', data: payload, timeout: 100000 });
+export const Label = styled.label`
+  font-size: 16px;
+  font-weight: 600;
+`;
 
-export const createConnection = (plugin: string, payload: any) =>
-  request(`/plugins/${plugin}/connections`, { method: 'post', data: payload });
+export const LabelInfo = styled.i`
+  color: #ff8b8b;
+`;
 
-export const getConnection = (plugin: string, id: ID) => request(`/plugins/${plugin}/connections/${id}`);
+export const LabelDescription = styled.p`
+  margin: 0;
+`;
 
-export const updateConnection = (plugin: string, id: ID, payload: any) =>
-  request(`/plugins/${plugin}/connections/${id}`, {
-    method: 'patch',
-    data: payload,
-  });
+export const Endpoint = styled.div`
+  p {
+    margin: 10px 0;
+  }
+`;
+
+export const Token = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+
+  .input {
+    display: flex;
+    align-items: center;
+  }
+
+  .info {
+    margin-left: 4px;
+
+    span.error {
+      color: ${Colors.RED3};
+    }
+
+    span.success {
+      color: ${Colors.GREEN3};
+    }
+  }
+`;

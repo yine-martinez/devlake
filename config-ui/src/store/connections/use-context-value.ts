@@ -84,6 +84,9 @@ export const useContextValue = ({ plugin, filterBeta = false, filter }: UseConte
         token: it.token,
         username: it.username,
         password: it.password,
+        firstValue: it.firstValue,
+        lastValue: it.lastValue,
+        spreadsheetID: it.spreadsheetID,
         authMethod: it.authMethod,
       })),
     );
@@ -107,8 +110,10 @@ export const useContextValue = ({ plugin, filterBeta = false, filter }: UseConte
             : cs,
         ),
       );
-
-      const { plugin, endpoint, proxy, token, username, password, authMethod } = selectedConnection;
+      //TODO
+      // const { plugin, endpoint, proxy, token, username, password, authMethod } = selectedConnection;
+      const { plugin, endpoint, proxy, token, username, password, firstValue, lastValue, spreadsheetID, authMethod } =
+        selectedConnection;
 
       let status = ConnectionStatusEnum.OFFLINE;
 
@@ -119,6 +124,9 @@ export const useContextValue = ({ plugin, filterBeta = false, filter }: UseConte
           token,
           username,
           password,
+          firstValue,
+          lastValue,
+          spreadsheetID,
           authMethod,
         });
         status = res.success ? ConnectionStatusEnum.ONLINE : ConnectionStatusEnum.OFFLINE;

@@ -16,18 +16,28 @@
  *
  */
 
-import { request } from '@/utils';
+import type { ScopeItemType } from './types';
+import * as S from './styled';
+import { DataScopeMillerColumns } from '@/plugins';
+import React from 'react';
 
-export const testConnection = (plugin: string, payload: any) =>
-  request(`/plugins/${plugin}/test`, { method: 'post', data: payload, timeout: 100000 });
+interface Props {
+  connectionId: ID;
+  selectedItems: ScopeItemType[];
+  onChangeItems: (selectedItems: ScopeItemType[]) => void;
+}
 
-export const createConnection = (plugin: string, payload: any) =>
-  request(`/plugins/${plugin}/connections`, { method: 'post', data: payload });
-
-export const getConnection = (plugin: string, id: ID) => request(`/plugins/${plugin}/connections/${id}`);
-
-export const updateConnection = (plugin: string, id: ID, payload: any) =>
-  request(`/plugins/${plugin}/connections/${id}`, {
-    method: 'patch',
-    data: payload,
-  });
+export const GoogleDataScope = ({ connectionId, selectedItems, onChangeItems }: Props) => {
+  return (
+    <S.DataScope>
+      <h3>Repositories *</h3>
+      <p>Select the repositories you would like to sync.</p>
+      <DataScopeMillerColumns
+        plugin="google"
+        connectionId={connectionId}
+        selectedItems={selectedItems}
+        onChangeItems={onChangeItems}
+      />
+    </S.DataScope>
+  );
+};

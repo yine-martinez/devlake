@@ -35,6 +35,7 @@ import { ZentaoDataScope } from '@/plugins/register/zentao';
 import * as API from './api';
 import * as S from './styled';
 import { TapdDataScope } from '@/plugins/register/tapd';
+import { GoogleDataScope } from '@/plugins/register/google';
 
 interface Props {
   plugin: string;
@@ -153,6 +154,10 @@ export const DataScopeForm = ({
 
           {plugin === 'tapd' && (
             <TapdDataScope connectionId={connectionId} selectedItems={scope} onChangeItems={setScope} />
+          )}
+
+          {plugin === 'google' && (
+            <GoogleDataScope connectionId={connectionId} selectedItems={scope} onChangeItems={setScope} />
           )}
         </div>
 

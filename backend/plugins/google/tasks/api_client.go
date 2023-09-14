@@ -18,40 +18,36 @@ limitations under the License.
 package tasks
 
 import (
+	"fmt"
+	"github.com/apache/incubator-devlake/core/plugin"
+	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/apache/incubator-devlake/core/errors"
-	"github.com/apache/incubator-devlake/core/plugin"
-	"github.com/apache/incubator-devlake/helpers/pluginhelper/api"
-	"github.com/apache/incubator-devlake/plugins/zentao/models"
+	"github.com/apache/incubator-devlake/plugins/google/models"
 )
 
-func NewZentaoApiClient(taskCtx plugin.TaskContext, connection *models.ZentaoConnection) (*api.ApiAsyncClient, error) {
+func NewGoogleApiClient(taskCtx plugin.TaskContext, connection *models.GoogleConnection) (*api.ApiAsyncClient, errors.Error) {
 
-	authApiClient, err := api.NewApiClient(taskCtx.GetContext(), connection.Endpoint, nil, 0, connection.Proxy, taskCtx)
+	headers := map[string]string{
+		"Authorization": fmt.Sprintf("Bearer %v", connection.Token),
+	}
+	apiClient, err := api.NewApiClient(taskCtx.GetContext(), connection.Endpoint, headers, 0, "", taskCtx)
 	if err != nil {
 		return nil, err
 	}
-	// request for access token
-	tokenReqBody := &models.ApiAccessTokenRequest{
-		Account:  connection.Username,
-		Password: connection.Password,
-	}
-	tokenRes, err := authApiClient.Post("/tokens", nil, tokenReqBody, nil)
-	if err != nil {
-		return nil, err
-	}
-	tokenResBody := &models.ApiAccessTokenResponse{}
-	err = api.UnmarshalResponse(tokenRes, tokenResBody)
-	apiClient, err := api.NewApiClientFromConnection(taskCtx.GetContext(), taskCtx, connection)
-	if err != nil {
-		return nil, err
-	}
+	apiClient.SetAfterFunction(func(res *http.Response) errors.Error {
+		if res.StatusCode == http.StatusUnauthorized {
+			return errors.HttpStatus(res.StatusCode).New("authentication failed, please check your AccessToken")
+		}
+		return nil
+	})
+
 	// create rate limit calculator
 	rateLimiter := &api.ApiRateLimitCalculator{
-		UserRateLimitPerHour: connection.RateLimitPerHour,
+		UserRateLimitPerHour: 300,
 		DynamicRateLimit: func(res *http.Response) (int, time.Duration, errors.Error) {
 			rateLimitHeader := res.Header.Get("RateLimit-Limit")
 			if rateLimitHeader == "" {
@@ -60,7 +56,7 @@ func NewZentaoApiClient(taskCtx plugin.TaskContext, connection *models.ZentaoCon
 			}
 			rateLimit, err := strconv.Atoi(rateLimitHeader)
 			if err != nil {
-				return 0, 0, errors.Default.Wrap(err, "failed to parse RateLimit-Limit header: %w")
+				return 0, 0, errors.Default.Wrap(err, "failed to parse RateLimit-Limit header")
 			}
 			// seems like {{ .plugin-ame }} rate limit is on minute basis
 			return rateLimit, 1 * time.Minute, nil
@@ -75,9 +71,4 @@ func NewZentaoApiClient(taskCtx plugin.TaskContext, connection *models.ZentaoCon
 		return nil, err
 	}
 	return asyncApiClient, nil
-}
-
-type ZentaoPagination struct {
-	Total int `json:"total"`
-	Limit int `json:"limit"`
 }

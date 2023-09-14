@@ -16,18 +16,12 @@
  *
  */
 
-import { request } from '@/utils';
+import type { PluginConfigType } from '@/plugins';
 
-export const testConnection = (plugin: string, payload: any) =>
-  request(`/plugins/${plugin}/test`, { method: 'post', data: payload, timeout: 100000 });
+import { BasePipelineConfig } from '../base';
 
-export const createConnection = (plugin: string, payload: any) =>
-  request(`/plugins/${plugin}/connections`, { method: 'post', data: payload });
-
-export const getConnection = (plugin: string, id: ID) => request(`/plugins/${plugin}/connections/${id}`);
-
-export const updateConnection = (plugin: string, id: ID, payload: any) =>
-  request(`/plugins/${plugin}/connections/${id}`, {
-    method: 'patch',
-    data: payload,
-  });
+export const OrgConfig: PluginConfigType = {
+  ...BasePipelineConfig,
+  plugin: 'org',
+  name: 'org',
+};
