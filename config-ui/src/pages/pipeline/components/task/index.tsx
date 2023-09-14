@@ -42,7 +42,7 @@ export const PipelineTask = ({ task }: Props) => {
     const config = PluginConfig.find((p) => p.plugin === task.plugin) as PluginConfigType;
     const options = JSON.parse(task.options);
 
-    let name = config.name;
+    let name = config.name
 
     switch (true) {
       case ['github', 'github_graphql'].includes(config.plugin):

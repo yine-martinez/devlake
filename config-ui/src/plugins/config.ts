@@ -39,6 +39,7 @@ import { WebhookConfig } from './register/webook';
 import { ZenTaoConfig } from './register/zentao';
 import { GoogleConfig } from '@/plugins/register/google';
 import { TeambitionConfig } from './register/teambition';
+import {OrgConfig} from "@/plugins/register/org";
 
 export const PluginConfig: PluginConfigType[] = [
   AEConfig,
@@ -63,4 +64,5 @@ export const PluginConfig: PluginConfigType[] = [
   ZenTaoConfig,
   WebhookConfig,
   GoogleConfig,
+  OrgConfig,
 ].sort((a, b) => a.sort - b.sort);
